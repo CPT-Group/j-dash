@@ -32,24 +32,31 @@ export default function ToastManager({
 
     // Check for new overdue tickets
     if (overdueCount > previousOverdueCount) {
-      const newOverdueTickets = tickets.filter(ticket => 
-        ticket.dueDate && 
-        new Date(ticket.dueDate) < new Date() && 
-        ticket.status !== 'Done' &&
-        !previousTickets.some(prev => prev.key === ticket.key)
-      );
+      const newOverdueCount = overdueCount - previousOverdueCount;
+      toast.current?.show({
+        severity: 'error',
+        summary: '🚨 New Overdue Tickets',
+        detail: `${newOverdueCount} tickets became overdue`,
+        life: 30000, // 30 seconds
+        sticky: false,
+        closable: true
+      });
+    }
 
-      newOverdueTickets.forEach(ticket => {
-        const daysOverdue = Math.floor((new Date().getTime() - new Date(ticket.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
-        
-        toast.current?.show({
-          severity: 'error',
-          summary: '🚨 LATE ITEM ON ENTRY - UNFAIR!',
-          detail: `${ticket.key}: ${ticket.summary} - ${daysOverdue} days overdue`,
-          life: 0, // Never auto-dismiss
-          sticky: true,
-          closable: true
-        });
+    // Check for completed tickets (green toasts)
+    const completedTickets = tickets.filter(ticket => 
+      ticket.status === 'Done' && 
+      !previousTickets.some(prev => prev.key === ticket.key && prev.status !== 'Done')
+    );
+
+    if (completedTickets.length > 0) {
+      toast.current?.show({
+        severity: 'success',
+        summary: '✅ Tickets Completed',
+        detail: `${completedTickets.length} tickets completed`,
+        life: 30000, // 30 seconds
+        sticky: false,
+        closable: true
       });
     }
 
@@ -61,174 +68,123 @@ export default function ToastManager({
       !previousTickets.some(prev => prev.key === ticket.key)
     );
 
-    newDueTodayTickets.forEach(ticket => {
+    if (newDueTodayTickets.length > 0) {
       toast.current?.show({
         severity: 'warn',
-        summary: '⏰ DUE TODAY - URGENT!',
-        detail: `${ticket.key}: ${ticket.summary} - Due today!`,
-        life: 0,
-        sticky: true,
+        summary: '⏰ Due Today',
+        detail: `${newDueTodayTickets.length} tickets due today`,
+        life: 30000, // 30 seconds
+        sticky: false,
         closable: true
       });
-    });
+    }
 
     // Check for new missing component tickets
     if (missingComponentsCount > previousMissingComponentsCount) {
-      const newMissingComponentTickets = tickets.filter(ticket => 
-        (!ticket.component || ticket.component === 'No Component') &&
-        !previousTickets.some(prev => prev.key === ticket.key)
-      );
-
-      newMissingComponentTickets.forEach(ticket => {
-        toast.current?.show({
-          severity: 'warn',
-          summary: '🏷️ MISSING COMPONENT - JAMES NEEDS TO FIX!',
-          detail: `${ticket.key}: ${ticket.summary} - No component assigned`,
-          life: 0,
-          sticky: true,
-          closable: true
-        });
+      const newMissingCount = missingComponentsCount - previousMissingComponentsCount;
+      toast.current?.show({
+        severity: 'info',
+        summary: '🏷️ Missing Components',
+        detail: `${newMissingCount} tickets missing components`,
+        life: 30000, // 30 seconds
+        sticky: false,
+        closable: true
       });
     }
 
-    // Check for new Data Team New bottleneck
+    // Check for Data Team New bottleneck
     if (dataTeamNewCount > previousDataTeamNewCount) {
-      const newDataTeamNewTickets = tickets.filter(ticket => 
-        ticket.status === 'Data Team New' &&
-        !previousTickets.some(prev => prev.key === ticket.key)
-      );
-
-      newDataTeamNewTickets.forEach(ticket => {
-        toast.current?.show({
-          severity: 'error',
-          summary: '🔄 DATA TEAM NEW BOTTLENECK - WORKFLOW BROKEN!',
-          detail: `${ticket.key}: ${ticket.summary} - Stuck in Data Team New`,
-          life: 0,
-          sticky: true,
-          closable: true
-        });
-      });
-    }
-
-    // Check for Case 23CV010356 crisis
-    const case23CV010356Tickets = tickets.filter(ticket => 
-      ticket.summary.includes('23CV010356')
-    );
-
-    if (case23CV010356Tickets.length > 0) {
-      toast.current?.show({
-        severity: 'error',
-        summary: '🎯 CASE 23CV010356 CRISIS - RESOURCE DRAIN!',
-        detail: `${case23CV010356Tickets.length} tickets for single case - All missing components!`,
-        life: 0,
-        sticky: true,
-        closable: true
-      });
-    }
-
-    // Check for high priority tickets without due dates
-    const highPriorityNoDueDate = tickets.filter(ticket => 
-      (ticket.priority === 'High' || ticket.priority === 'Highest') &&
-      !ticket.dueDate &&
-      ticket.status !== 'Done'
-    );
-
-    if (highPriorityNoDueDate.length > 0) {
+      const newDataTeamNewCount = dataTeamNewCount - previousDataTeamNewCount;
       toast.current?.show({
         severity: 'warn',
-        summary: '⚠️ HIGH PRIORITY NO DUE DATE - PLANNING ISSUE!',
-        detail: `${highPriorityNoDueDate.length} high priority tickets without due dates`,
-        life: 0,
-        sticky: true,
+        summary: '🔄 Data Team New Bottleneck',
+        detail: `${newDataTeamNewCount} tickets stuck in Data Team New`,
+        life: 30000, // 30 seconds
+        sticky: false,
         closable: true
       });
     }
 
-    // Check for tickets stuck in Data Team New for too long
-    const stuckDataTeamNew = tickets.filter(ticket => 
-      ticket.status === 'Data Team New' &&
-      ticket.created &&
-      (new Date().getTime() - new Date(ticket.created).getTime()) > (3 * 24 * 60 * 60 * 1000) // 3 days
+    // Check for tickets that moved out of Data Team New (positive)
+    const previousDataTeamNewTickets = previousTickets.filter(t => t.status === 'Data Team New');
+    const currentDataTeamNewTickets = tickets.filter(t => t.status === 'Data Team New');
+    const movedOutOfDataTeamNew = previousDataTeamNewTickets.filter(prev => 
+      !currentDataTeamNewTickets.some(current => current.key === prev.key)
     );
 
-    if (stuckDataTeamNew.length > 0) {
+    if (movedOutOfDataTeamNew.length > 0) {
       toast.current?.show({
-        severity: 'error',
-        summary: '🐌 STUCK IN DATA TEAM NEW - ESCALATION NEEDED!',
-        detail: `${stuckDataTeamNew.length} tickets stuck >3 days in Data Team New`,
-        life: 0,
-        sticky: true,
+        severity: 'success',
+        summary: '🚀 Workflow Progress',
+        detail: `${movedOutOfDataTeamNew.length} tickets moved out of Data Team New`,
+        life: 30000, // 30 seconds
+        sticky: false,
         closable: true
       });
     }
 
-    // Check for tickets with 53+ days overdue (crisis cluster)
-    const crisisOverdue = tickets.filter(ticket => 
-      ticket.dueDate &&
-      new Date(ticket.dueDate) < new Date() &&
-      ticket.status !== 'Done' &&
-      (new Date().getTime() - new Date(ticket.dueDate).getTime()) > (53 * 24 * 60 * 60 * 1000) // 53 days
+    // Check for tickets that got components assigned (positive)
+    const previousMissingComponentTickets = previousTickets.filter(t => t.component === 'No Component');
+    const currentMissingComponentTickets = tickets.filter(t => t.component === 'No Component');
+    const gotComponentsAssigned = previousMissingComponentTickets.filter(prev => 
+      !currentMissingComponentTickets.some(current => current.key === prev.key)
     );
 
-    if (crisisOverdue.length > 0) {
+    if (gotComponentsAssigned.length > 0) {
+      toast.current?.show({
+        severity: 'success',
+        summary: '🏷️ Components Assigned',
+        detail: `${gotComponentsAssigned.length} tickets got components assigned`,
+        life: 30000, // 30 seconds
+        sticky: false,
+        closable: true
+      });
+    }
+
+    // Check for critical issues (persistent toasts)
+    if (overdueCount > 50) {
       toast.current?.show({
         severity: 'error',
-        summary: '💥 53+ DAYS OVERDUE CRISIS CLUSTER!',
-        detail: `${crisisOverdue.length} tickets 53+ days overdue - MASSIVE BACKLOG!`,
-        life: 0,
+        summary: '🚨 CRITICAL: Overdue Crisis',
+        detail: `${overdueCount} tickets overdue - Immediate attention needed!`,
+        life: 0, // Never auto-dismiss
         sticky: true,
         closable: true
       });
     }
 
-    // Check for team workload imbalance
-    const kyleTickets = tickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.status !== 'Done').length;
-    const jamesTickets = tickets.filter(t => t.assignee === 'James Cassidy' && t.status !== 'Done').length;
-    const thomasTickets = tickets.filter(t => t.assignee === 'Thomas Williams' && t.status !== 'Done').length;
-
-    const maxTickets = Math.max(kyleTickets, jamesTickets, thomasTickets);
-    const minTickets = Math.min(kyleTickets, jamesTickets, thomasTickets);
-
-    if (maxTickets > 0 && (maxTickets - minTickets) > 10) {
-      toast.current?.show({
-        severity: 'warn',
-        summary: '⚖️ TEAM WORKLOAD IMBALANCE!',
-        detail: `Kyle: ${kyleTickets}, James: ${jamesTickets}, Thomas: ${thomasTickets} - Redistribute work!`,
-        life: 0,
-        sticky: true,
-        closable: true
-      });
-    }
-
-    // Check for component assignment crisis
     if (missingComponentsCount > 50) {
       toast.current?.show({
         severity: 'error',
-        summary: '🏷️ COMPONENT ASSIGNMENT CRISIS!',
-        detail: `${missingComponentsCount} tickets missing components - James manually assigns every morning!`,
-        life: 0,
+        summary: '🚨 CRITICAL: Component Crisis',
+        detail: `${missingComponentsCount} tickets missing components - James needs help!`,
+        life: 0, // Never auto-dismiss
         sticky: true,
         closable: true
       });
     }
 
-    // Check for Request Complete bottleneck
-    const requestCompleteTickets = tickets.filter(ticket => 
-      ticket.status === 'Request Complete'
-    );
-
-    if (requestCompleteTickets.length > 5) {
+    if (dataTeamNewCount > 10) {
       toast.current?.show({
-        severity: 'warn',
-        summary: '📋 REQUEST COMPLETE BOTTLENECK!',
-        detail: `${requestCompleteTickets.length} tickets stuck in Request Complete - Approval needed!`,
-        life: 0,
+        severity: 'error',
+        summary: '🚨 CRITICAL: Workflow Bottleneck',
+        detail: `${dataTeamNewCount} tickets stuck in Data Team New - Process broken!`,
+        life: 0, // Never auto-dismiss
         sticky: true,
         closable: true
       });
     }
 
-  }, [tickets, previousTickets, overdueCount, previousOverdueCount, missingComponentsCount, previousMissingComponentsCount, dataTeamNewCount, previousDataTeamNewCount]);
+  }, [
+    tickets, 
+    previousTickets, 
+    overdueCount, 
+    previousOverdueCount, 
+    missingComponentsCount, 
+    previousMissingComponentsCount,
+    dataTeamNewCount,
+    previousDataTeamNewCount
+  ]);
 
   return <Toast ref={toast} position="top-right" />;
 }

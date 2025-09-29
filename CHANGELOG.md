@@ -2,7 +2,14 @@
 
 All notable changes to J-Dash will be documented in this file.
 
-## [0.3.4] - 2025-01-26
+## [0.3.5] - 2025-01-26
+
+### Added
+- 🍞 **Enhanced Toast System**: Completely redesigned toast notifications for better UX
+- ✅ **Success Toasts**: Green toasts for completed tickets and positive workflow progress
+- ⏰ **Auto-Dismiss Timers**: Most toasts now disappear after 30 seconds (except critical ones)
+- 🎯 **Informative Messages**: Concise, informative toast messages with ticket counts
+- 🔧 **PrimeReact Provider**: Properly configured PrimeReact provider for better component functionality
 
 ### Fixed
 - 🎨 **Background Animation Visibility**: Fixed CSS-only animated background that wasn't showing
@@ -10,6 +17,8 @@ All notable changes to J-Dash will be documented in this file.
 - ✨ **Enhanced Background Effects**: Increased opacity and visibility of gradient animations
 - 💫 **Particle Effects**: Made floating particles more visible and engaging
 - 🔧 **Color Balance**: Balanced VS Code structure with original synth theme vibrancy
+- 🍞 **Toast Functionality**: Fixed PrimeReact toast components not working properly
+- ❌ **Toast Dismissal**: Fixed X button not working on toast notifications
 
 ### Changed
 - 🎨 **Theme Colors**: Restored vibrant colors while maintaining professional layout

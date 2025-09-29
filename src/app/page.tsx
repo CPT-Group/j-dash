@@ -125,25 +125,25 @@ export default function Dashboard() {
       let overdueData, dueTodayData, missingComponentData, allTicketsData;
       
       try {
-        // Fetch overdue tickets
+        // Fetch overdue tickets from CM and OPRD boards
         overdueData = await fetchJiraData('search', {
-          jql: 'assignee in ("kyle@cptgroup.com", "james@cptgroup.com", "thomas@cptgroup.com") AND duedate < now() AND status != Done ORDER BY duedate ASC'
+          jql: 'project in (CM, OPRD) AND duedate < now() AND status != Done ORDER BY duedate ASC'
         });
         
-        // Fetch due today tickets
+        // Fetch due today tickets from CM and OPRD boards
         const today = new Date().toISOString().split('T')[0];
         dueTodayData = await fetchJiraData('search', {
-          jql: `assignee in ("kyle@cptgroup.com", "james@cptgroup.com", "thomas@cptgroup.com") AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
+          jql: `project in (CM, OPRD) AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
         });
         
-        // Fetch missing component tickets
+        // Fetch missing component tickets from CM and OPRD boards
         missingComponentData = await fetchJiraData('search', {
-          jql: 'assignee in ("kyle@cptgroup.com", "james@cptgroup.com", "thomas@cptgroup.com") AND component is EMPTY ORDER BY updated DESC'
+          jql: 'project in (CM, OPRD) AND component is EMPTY ORDER BY updated DESC'
         });
         
-        // Fetch all data team tickets
+        // Fetch all tickets from CM and OPRD boards
         allTicketsData = await fetchJiraData('search', {
-          jql: 'assignee in ("kyle@cptgroup.com", "james@cptgroup.com", "thomas@cptgroup.com") ORDER BY updated DESC'
+          jql: 'project in (CM, OPRD) ORDER BY updated DESC'
         });
       } catch (apiError) {
         console.warn('Jira API error, using mock data:', apiError);
