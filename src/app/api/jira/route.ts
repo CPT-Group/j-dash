@@ -37,13 +37,83 @@ async function makeJiraRequest(path: string) {
   return response.json();
 }
 
+// Cache for API responses
+const cache = new Map<string, { data: Record<string, unknown>; timestamp: number; ttl: number }>();
+
+// Cache TTL in milliseconds (5 minutes for most data, 1 minute for critical data)
+const CACHE_TTL = {
+  CRITICAL: 60 * 1000, // 1 minute for overdue, missing components, data team new
+  NORMAL: 5 * 60 * 1000, // 5 minutes for general data
+  ALL_TICKETS: 2 * 60 * 1000 // 2 minutes for all tickets (more frequent updates)
+};
+
+function getCacheKey(endpoint: string, jql: string): string {
+  return `${endpoint}:${jql}`;
+}
+
+function getCacheTTL(jql: string): number {
+  if (jql.includes('duedate < now()') || jql.includes('component is EMPTY') || jql.includes('Data Team New')) {
+    return CACHE_TTL.CRITICAL;
+  }
+  if (jql.includes('ORDER BY updated DESC') && !jql.includes('status =')) {
+    return CACHE_TTL.ALL_TICKETS;
+  }
+  return CACHE_TTL.NORMAL;
+}
+
+function isCacheValid(timestamp: number, ttl: number): boolean {
+  return Date.now() - timestamp < ttl;
+}
+
+async function fetchAllJiraData(jql: string, fields: string): Promise<Record<string, unknown>> {
+  const allIssues: Record<string, unknown>[] = [];
+  let startAt = 0;
+  const maxResults = 1000; // Jira's maximum per request
+  let total = 0;
+  let hasMore = true;
+
+  console.log(`Fetching all data for JQL: ${jql}`);
+
+  while (hasMore) {
+    const url = `/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}&fields=${fields}`;
+    console.log(`Fetching batch: startAt=${startAt}, maxResults=${maxResults}`);
+    
+    const batchData = await makeJiraRequest(url) as Record<string, unknown>;
+    
+    if (batchData.issues && Array.isArray(batchData.issues) && batchData.issues.length > 0) {
+      allIssues.push(...(batchData.issues as Record<string, unknown>[]));
+      total = (batchData.total as number) || allIssues.length;
+      startAt += maxResults;
+      hasMore = allIssues.length < total;
+      
+      console.log(`Fetched ${(batchData.issues as Record<string, unknown>[]).length} issues, total so far: ${allIssues.length}/${total}`);
+    } else {
+      hasMore = false;
+    }
+
+    // Safety check to prevent infinite loops
+    if (startAt > 50000) { // Max 50k tickets
+      console.warn('Reached safety limit of 50k tickets, stopping pagination');
+      break;
+    }
+  }
+
+  console.log(`Completed fetching all data: ${allIssues.length} total issues`);
+  
+  return {
+    total: allIssues.length,
+    issues: allIssues
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
     const jql = searchParams.get('jql');
+    const useCache = searchParams.get('cache') !== 'false'; // Default to true
 
-    console.log('API Request:', { endpoint, jql });
+    console.log('API Request:', { endpoint, jql, useCache });
 
     if (!endpoint || !jql) {
       return NextResponse.json(
@@ -59,19 +129,44 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check cache first
+    if (useCache) {
+      const cacheKey = getCacheKey(endpoint, jql);
+      const cached = cache.get(cacheKey);
+      
+      if (cached && isCacheValid(cached.timestamp, cached.ttl)) {
+        console.log('Returning cached data for:', cacheKey);
+        return NextResponse.json(cached.data);
+      }
+    }
+
     console.log('Making Jira request with JQL:', jql);
     
-    // Use the new /search/jql endpoint with fields parameter
-    const data = await makeJiraRequest(`/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,assignee,status,priority,duedate,components,issuetype,created,updated,customfield_10016`);
-    console.log('Jira response received, issue count:', data.issues?.length || 0);
+    // Fetch all data with pagination
+    const fields = 'summary,assignee,status,priority,duedate,components,issuetype,created,updated,customfield_10016';
+    const data = await fetchAllJiraData(jql, fields);
     
-    // Transform the response to match the expected format
-    const transformedData = {
-      total: data.issues?.length || 0,
-      issues: data.issues || []
-    };
+    console.log('Jira response received, total issues:', data.total);
     
-    return NextResponse.json(transformedData);
+    // Cache the result
+    if (useCache) {
+      const cacheKey = getCacheKey(endpoint, jql);
+      const ttl = getCacheTTL(jql);
+      cache.set(cacheKey, {
+        data,
+        timestamp: Date.now(),
+        ttl
+      });
+      
+      // Clean up old cache entries
+      for (const [key, value] of cache.entries()) {
+        if (!isCacheValid(value.timestamp, value.ttl)) {
+          cache.delete(key);
+        }
+      }
+    }
+    
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Jira API error:', error);
     return NextResponse.json(

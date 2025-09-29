@@ -7,6 +7,7 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import { ProgressBar } from 'primereact/progressbar';
 import { Divider } from 'primereact/divider';
+import { Panel } from 'primereact/panel';
 
 // Import new PrimeReact components
 import WorkflowChart from '@/components/analytics/WorkflowChart';
@@ -93,6 +94,7 @@ export default function RedesignedDashboard() {
     setShowTicketDialog(true);
   };
 
+
   // Calculate workload imbalance for crisis dialog
   const workloadImbalance = allTickets.reduce((acc, ticket) => {
     acc[ticket.assignee] = (acc[ticket.assignee] || 0) + 1;
@@ -104,9 +106,9 @@ export default function RedesignedDashboard() {
     .sort((a, b) => b.count - a.count);
 
   const crisisData = {
-    overdueTickets: overdueData?.issues ? transformJiraIssuesToTickets(overdueData.issues) : [],
-    missingComponentTickets: missingComponentData?.issues ? transformJiraIssuesToTickets(missingComponentData.issues) : [],
-    dataTeamNewTickets: dataTeamNewData?.issues ? transformJiraIssuesToTickets(dataTeamNewData.issues) : [],
+    overdueTickets: allTickets.filter(t => t.dueDate && new Date(t.dueDate) < new Date()),
+    missingComponentTickets: allTickets.filter(t => !t.component || t.component === 'No Component'),
+    dataTeamNewTickets: allTickets.filter(t => t.status === 'Data Team New'),
     workloadImbalance: workloadArray
   };
 
@@ -142,7 +144,13 @@ export default function RedesignedDashboard() {
           </div>
 
           {/* Key Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Panel 
+            header="Key Metrics Overview" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-synth-bg-card border border-synth-border-primary">
               <div className="flex items-center justify-between">
                 <div>
@@ -201,10 +209,17 @@ export default function RedesignedDashboard() {
                 </div>
               </div>
             </Card>
-          </div>
+            </div>
+          </Panel>
 
           {/* Progress Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <Panel 
+            header="Project Health & Team Workload" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-synth-bg-card border border-synth-border-primary">
               <h3 className="text-lg font-semibold text-synth-text-bright mb-3">
                 Project Health
@@ -246,35 +261,32 @@ export default function RedesignedDashboard() {
                 Team Workload
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-synth-text-muted">Kyle Dilbeck</span>
-                  <Badge value={stats.teamPerformance.kyle} severity="info" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-synth-text-muted">James Cassidy</span>
-                  <Badge value={stats.teamPerformance.james} severity="info" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-synth-text-muted">Thomas Williams</span>
-                  <Badge value={stats.teamPerformance.thomas} severity="info" />
-                </div>
+                 <div className="flex justify-between items-center">
+                   <span className="text-synth-text-muted">Kyle Dilbeck</span>
+                    <Badge value={stats.teamPerformance.kyle} severity="info" />
+                 </div>
+                 <div className="flex justify-between items-center">
+                   <span className="text-synth-text-muted">James Cassidy</span>
+                   <Badge value={stats.teamPerformance.james} severity="info" />
+                 </div>
+                 <div className="flex justify-between items-center">
+                   <span className="text-synth-text-muted">Thomas Williams</span>
+                   <Badge value={stats.teamPerformance.thomas} severity="info" />
+                 </div>
               </div>
             </Card>
-          </div>
+            </div>
+          </Panel>
         </div>
+
 
         {/* Crisis Alerts */}
         {stats.overdueCount > 10 && (
           <CaseCrisisAlert 
             caseNumber={`OVERDUE-CRISIS-${stats.overdueCount}`}
             ticketCount={stats.overdueCount}
-            tickets={overdueData?.issues?.slice(0, 5).map(issue => ({
-              key: issue.key,
-              summary: issue.fields.summary,
-              assignee: issue.fields.assignee?.displayName || 'Unassigned',
-              status: issue.fields.status.name,
-              component: issue.fields.components?.[0]?.name || 'No Component'
-            })) || []}
+            tickets={crisisData.overdueTickets.slice(0, 5)}
+            alertType="overdue"
           />
         )}
         
@@ -282,13 +294,8 @@ export default function RedesignedDashboard() {
           <CaseCrisisAlert 
             caseNumber={`COMPONENTS-CRISIS-${stats.missingComponentsCount}`}
             ticketCount={stats.missingComponentsCount}
-            tickets={missingComponentData?.issues?.slice(0, 5).map(issue => ({
-              key: issue.key,
-              summary: issue.fields.summary,
-              assignee: issue.fields.assignee?.displayName || 'Unassigned',
-              status: issue.fields.status.name,
-              component: issue.fields.components?.[0]?.name || 'No Component'
-            })) || []}
+            tickets={crisisData.missingComponentTickets.slice(0, 5)}
+            alertType="components"
           />
         )}
         
@@ -296,19 +303,29 @@ export default function RedesignedDashboard() {
           <CaseCrisisAlert 
             caseNumber={`DATA-TEAM-CRISIS-${stats.dataTeamNewCount}`}
             ticketCount={stats.dataTeamNewCount}
-            tickets={dataTeamNewData?.issues?.slice(0, 5).map(issue => ({
-              key: issue.key,
-              summary: issue.fields.summary,
-              assignee: issue.fields.assignee?.displayName || 'Unassigned',
-              status: issue.fields.status.name,
-              component: issue.fields.components?.[0]?.name || 'No Component'
-            })) || []}
+            tickets={crisisData.dataTeamNewTickets.slice(0, 5)}
+            alertType="data-team"
           />
         )}
 
-        {/* Main Content Tabs */}
-        <TabView className="w-full">
-          <TabPanel header="Workflow Overview" leftIcon="pi pi-sitemap mr-2">
+        {/* Workload Imbalance Alert */}
+        {workloadArray.length > 0 && workloadArray[0].count / workloadArray[workloadArray.length - 1].count > 3 && (
+          <CaseCrisisAlert 
+            caseNumber="WORKLOAD-CRISIS"
+            ticketCount={workloadArray[0].count}
+            tickets={[]}
+            alertType="workload"
+          />
+        )}
+
+        {/* Main Content Sections */}
+        <div className="space-y-6">
+          <Panel 
+            header="Workflow Overview" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
             <div className="space-y-6">
               <WorkflowChart 
                 tickets={allTickets}
@@ -320,34 +337,49 @@ export default function RedesignedDashboard() {
                 title="Status Kanban Board"
               />
             </div>
-          </TabPanel>
+          </Panel>
 
-          <TabPanel header="Analytics" leftIcon="pi pi-chart-bar mr-2">
+          <Panel 
+            header="Analytics Dashboard" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
             <AnalyticsDashboard 
               tickets={allTickets}
               className="w-full"
             />
-          </TabPanel>
+          </Panel>
 
-          <TabPanel header="Team Performance" leftIcon="pi pi-users mr-2">
+          <Panel 
+            header="Team Performance & Workload" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
             <TeamOrgChart 
               tickets={allTickets}
               title="Team Organization & Performance"
               className="w-full"
             />
-          </TabPanel>
+          </Panel>
 
-          <TabPanel header="Ticket Management" leftIcon="pi pi-table mr-2">
+          <Panel 
+            header="Advanced Ticket Management" 
+            className="mb-6"
+            toggleable
+            collapsed={false}
+          >
             <AdvancedDataTable 
               tickets={allTickets}
               title="Advanced Ticket Management"
               onTicketClick={handleTicketClick}
               className="w-full"
             />
-          </TabPanel>
-        </TabView>
+          </Panel>
+        </div>
 
-        {/* Toast Manager */}
+         {/* Toast Manager */}
         <ToastManager
           tickets={allTickets}
           previousTickets={[]}

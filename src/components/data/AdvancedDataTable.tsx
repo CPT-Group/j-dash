@@ -265,7 +265,7 @@ export default function AdvancedDataTable({
         loading={loading}
         header={header}
         filters={filters}
-        onFilter={(e) => setFilters(e.filters)}
+        onFilter={(e) => setFilters(e.filters as typeof filters)}
         globalFilterFields={['key', 'summary', 'assignee', 'status', 'priority', 'component', 'issueType']}
         selection={selectedTickets}
         onSelectionChange={(e) => setSelectedTickets(e.value)}
@@ -292,8 +292,7 @@ export default function AdvancedDataTable({
         className="w-full"
         pt={{
           table: { className: 'w-full' },
-          header: { className: 'bg-synth-bg-card' },
-          paginator: { className: 'bg-synth-bg-card border-t border-synth-border-primary' }
+          header: { className: 'bg-synth-bg-card' }
         }}
       >
         <Column 

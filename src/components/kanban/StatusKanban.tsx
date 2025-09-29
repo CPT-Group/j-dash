@@ -5,7 +5,7 @@ import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { Tag } from 'primereact/tag';
 import { Ticket } from '@/types/components/tickets';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface StatusKanbanProps {
   tickets: Ticket[];
@@ -89,7 +89,7 @@ export default function StatusKanban({
   };
 
   // Initialize groups when tickets change
-  useState(() => {
+  useEffect(() => {
     groupTicketsByStatus();
   }, [tickets]);
 
@@ -137,20 +137,18 @@ export default function StatusKanban({
             </p>
           </div>
           {isOverdue(ticket) && (
-            <Badge value="Overdue" severity="danger" size="small" />
+            <Badge value="Overdue" severity="danger" />
           )}
         </div>
         
         <div className="flex flex-wrap gap-1 mb-2">
           <Tag 
-            value={ticket.priority || 'Unassigned'} 
+            value={ticket.priority || 'Unassigned'}
             severity={getPrioritySeverity(ticket.priority || 'Unassigned')}
-            size="small"
           />
-          <Tag 
-            value={ticket.status} 
+          <Tag
+            value={ticket.status}
             severity={getStatusSeverity(ticket.status)}
-            size="small"
           />
         </div>
         
@@ -162,9 +160,8 @@ export default function StatusKanban({
         {ticket.component && (
           <div className="mt-2">
             <Tag 
-              value={ticket.component} 
+              value={ticket.component}
               severity="info"
-              size="small"
             />
           </div>
         )}
@@ -195,6 +192,7 @@ export default function StatusKanban({
               <div className="max-h-96 overflow-y-auto">
                 <OrderList
                   value={group.tickets}
+                  dataKey="key"
                   onChange={(e) => {
                     // Update the tickets in this status group
                     const newGroups = [...statusGroups];

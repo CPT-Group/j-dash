@@ -69,6 +69,60 @@ All notable changes to J-Dash will be documented in this file.
 - 🎯 **Crisis Detection**: Automated alerts for overdue tickets, missing components, and bottlenecks
 - 📈 **Performance Metrics**: Live team performance tracking and workload analysis
 
+## [0.4.1] - 2025-01-29
+
+### 🚀 **MAJOR PERFORMANCE & DATA IMPROVEMENTS**
+
+#### **Unlimited Data Fetching**
+- 🔄 **Pagination Support**: Removed 100-ticket limit, now fetches ALL tickets (27,422+)
+- 📊 **Batch Processing**: Fetches data in 1000-ticket batches for optimal performance
+- 🛡️ **Safety Limits**: Built-in protection against infinite loops (50k ticket max)
+- ⚡ **Efficient API**: Uses Jira's maximum batch size (1000) for fastest data retrieval
+
+#### **Advanced Caching System**
+- 🧠 **Multi-Level Caching**: Server-side + client-side caching for optimal performance
+- ⏰ **Smart TTL**: Different cache times for different data types
+  - Critical data (overdue, missing components): 1 minute
+  - All tickets data: 2 minutes  
+  - Normal data: 5 minutes
+- 🔄 **Auto-Cache Cleanup**: Automatic removal of expired cache entries
+- 📈 **Cache Health Monitoring**: Real-time cache statistics and health indicators
+
+#### **Enhanced Data Hooks**
+- 🎯 **useJiraStats**: Unified hook for all dashboard statistics
+- 🔄 **Refetch Capability**: Manual refresh functionality for all data
+- 📊 **Memoized Queries**: Pre-defined JQL queries with memoization
+- ⚡ **Optimized Re-renders**: Reduced unnecessary component updates
+- 🛡️ **Error Handling**: Comprehensive error states and recovery
+
+#### **Data Refresh Manager**
+- 🔄 **Manual Refresh**: Force refresh all data with one click
+- 🧹 **Cache Management**: Clear cache and view cache statistics
+- ⏰ **Auto-Refresh**: Configurable automatic data refresh
+- 📊 **Cache Health**: Visual indicators for cache performance
+- 🎛️ **Control Panel**: Complete data management interface
+
+#### **Performance Optimizations**
+- 🚀 **Parallel Fetching**: Multiple API calls processed simultaneously
+- 💾 **Memory Management**: Efficient data storage and cleanup
+- 🔄 **Smart Updates**: Only refresh data when necessary
+- 📊 **Batch Processing**: Process large datasets efficiently
+- ⚡ **Instant Loading**: Cached data loads instantly
+
+### **Technical Improvements**
+- 🏗️ **Server-Side Pagination**: Handles large datasets server-side
+- 🧠 **Client-Side Memoization**: Prevents duplicate API calls
+- 🔄 **Optimistic Updates**: UI updates before API completion
+- 📊 **Data Transformation**: Efficient data processing pipeline
+- 🛡️ **Error Recovery**: Graceful handling of API failures
+
+### **Data Accuracy**
+- ✅ **Complete Dataset**: Now shows ALL tickets, not just first 100
+- 📊 **Real Statistics**: Accurate counts and percentages
+- 🔄 **Live Updates**: Real-time data refresh with proper caching
+- 📈 **Performance Metrics**: True team workload and completion rates
+- 🎯 **Crisis Detection**: Based on complete dataset analysis
+
 ## [0.3.3] - 2025-01-29
 
 ### Added

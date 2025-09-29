@@ -1,13 +1,14 @@
 'use client';
 
-import { OrganizationChart } from 'primereact/organizationchart';
+import { OrganizationChart, OrganizationChartProps } from 'primereact/organizationchart';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { Tag } from 'primereact/tag';
 import { Ticket } from '@/types/components/tickets';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { TreeNode } from 'primereact/treenode';
 
-interface TeamOrgChartProps {
+interface TeamOrgChartProps extends Omit<OrganizationChartProps, 'value' | 'nodeTemplate'> {
   tickets: Ticket[];
   title?: string;
   className?: string;
@@ -24,7 +25,7 @@ interface TeamMember {
   specialties: string[];
 }
 
-interface OrgNode {
+interface OrgNode extends TreeNode {
   label: string;
   data: TeamMember;
   children?: OrgNode[];
@@ -35,7 +36,8 @@ interface OrgNode {
 export default function TeamOrgChart({ 
   tickets, 
   title = "Team Organization & Performance",
-  className = ""
+  className = "",
+  ...orgChartProps
 }: TeamOrgChartProps) {
   const [orgData, setOrgData] = useState<OrgNode | null>(null);
 
@@ -112,8 +114,15 @@ export default function TeamOrgChart({
     };
   };
 
-  useState(() => {
-    setOrgData(createOrgData());
+  useEffect(() => {
+    if (tickets && tickets.length >= 0) {
+      try {
+        setOrgData(createOrgData());
+      } catch (error) {
+        console.error('Error creating org data:', error);
+        setOrgData(null);
+      }
+    }
   }, [tickets]);
 
   const nodeTemplate = (node: OrgNode) => {
@@ -191,11 +200,10 @@ export default function TeamOrgChart({
           </h5>
           <div className="flex flex-wrap gap-1">
             {member.specialties.map((specialty, index) => (
-              <Tag 
+              <Tag
                 key={index}
-                value={specialty} 
+                value={specialty}
                 severity="info"
-                size="small"
               />
             ))}
           </div>
@@ -215,11 +223,11 @@ export default function TeamOrgChart({
     );
   };
 
-  if (!orgData) {
+  if (!orgData || !tickets || tickets.length === 0) {
     return (
       <Card title={title} className={className}>
         <div className="text-center text-synth-text-muted">
-          Loading team data...
+          {!tickets || tickets.length === 0 ? 'No team data available' : 'Loading team data...'}
         </div>
       </Card>
     );
@@ -229,7 +237,8 @@ export default function TeamOrgChart({
     <Card title={title} className={className}>
       <div className="w-full">
         <OrganizationChart
-          value={orgData}
+          {...orgChartProps}
+          value={orgData ? [orgData] : []}
           nodeTemplate={nodeTemplate}
           className="w-full"
           pt={{

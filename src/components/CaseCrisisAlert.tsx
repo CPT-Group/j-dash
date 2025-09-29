@@ -1,118 +1,176 @@
 'use client';
 
-import { AlertTriangle, ExternalLink, Users, Database, Globe } from 'lucide-react';
+import { Panel } from 'primereact/panel';
+import { Badge } from 'primereact/badge';
+import { Button } from 'primereact/button';
+import { AlertTriangle, ExternalLink, CheckCircle, Clock, Database, Activity, Users } from 'lucide-react';
 
-interface CaseCrisisAlertProps {
-  caseNumber?: string;
-  ticketCount?: number;
-  tickets?: Array<{
-    key: string;
-    summary: string;
-    assignee: string;
-    status: string;
-    component: string;
-  }>;
+interface Ticket {
+  key: string;
+  summary: string;
+  assignee: string;
+  status: string;
+  component?: string;
 }
 
-export default function CaseCrisisAlert({ caseNumber, ticketCount, tickets }: CaseCrisisAlertProps) {
-  const getComponentIcon = (component: string) => {
-    if (component.includes('Website') || component.includes('Web')) return Globe;
-    if (component.includes('Database') || component.includes('Data')) return Database;
-    return Users;
-  };
+interface CrisisAlertProps {
+  caseNumber?: string;
+  ticketCount?: number;
+  tickets?: Ticket[];
+  alertType: 'overdue' | 'components' | 'data-team' | 'completed' | 'workload';
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'data team new':
-        return 'text-synth-neon-yellow bg-synth-neon-yellow/20 border-synth-neon-yellow/50';
-      case 'to do':
-        return 'text-synth-neon-orange bg-synth-neon-orange/20 border-synth-neon-orange/50';
+export default function CrisisAlert({ 
+  caseNumber, 
+  ticketCount = 0, 
+  tickets = [],
+  alertType
+}: CrisisAlertProps) {
+  if (ticketCount === 0) return null;
+
+  const getAlertConfig = () => {
+    switch (alertType) {
+      case 'overdue':
+        return {
+          icon: <Clock className="w-5 h-5" />,
+          title: 'Overdue Tickets',
+          description: `${ticketCount} tickets are overdue and need immediate attention`,
+          color: 'red',
+          severity: 'danger' as const,
+          headerClass: 'border-red-500 bg-red-900/10',
+          contentClass: 'bg-red-900/20 border-red-500/30'
+        };
+      case 'components':
+        return {
+          icon: <Database className="w-5 h-5" />,
+          title: 'Missing Components',
+          description: `${ticketCount} tickets are missing component assignments`,
+          color: 'orange',
+          severity: 'warning' as const,
+          headerClass: 'border-orange-500 bg-orange-900/10',
+          contentClass: 'bg-orange-900/20 border-orange-500/30'
+        };
+      case 'data-team':
+        return {
+          icon: <Activity className="w-5 h-5" />,
+          title: 'Data Team Bottleneck',
+          description: `${ticketCount} tickets stuck in Data Team New status`,
+          color: 'purple',
+          severity: 'info' as const,
+          headerClass: 'border-purple-500 bg-purple-900/10',
+          contentClass: 'bg-purple-900/20 border-purple-500/30'
+        };
       case 'completed':
-        return 'text-synth-neon-green bg-synth-neon-green/20 border-synth-neon-green/50';
+        return {
+          icon: <CheckCircle className="w-5 h-5" />,
+          title: 'Recently Completed Tickets',
+          description: `${ticketCount} tickets have been completed recently`,
+          color: 'green',
+          severity: 'success' as const,
+          headerClass: 'border-green-500 bg-green-900/10',
+          contentClass: 'bg-green-900/20 border-green-500/30'
+        };
+      case 'workload':
+        return {
+          icon: <Users className="w-5 h-5" />,
+          title: 'Workload Imbalance',
+          description: `Severe workload imbalance detected across team members`,
+          color: 'yellow',
+          severity: 'warning' as const,
+          headerClass: 'border-yellow-500 bg-yellow-900/10',
+          contentClass: 'bg-yellow-900/20 border-yellow-500/30'
+        };
       default:
-        return 'text-synth-text-muted bg-synth-bg-hover border-synth-border-primary';
+        return {
+          icon: <AlertTriangle className="w-5 h-5" />,
+          title: 'Alert',
+          description: `${ticketCount} tickets need attention`,
+          color: 'gray',
+          severity: 'info' as const,
+          headerClass: 'border-gray-500 bg-gray-900/10',
+          contentClass: 'bg-gray-900/20 border-gray-500/30'
+        };
     }
   };
 
-  return (
-    <div className="bg-synth-status-error/10 border-2 border-synth-status-error/50 rounded-lg p-6 mb-8 animate-neon-pulse">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-synth-status-error/20 rounded-lg">
-            <AlertTriangle className="w-6 h-6 text-synth-status-error" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-synth-text-bright">
-              CASE CRISIS ALERT
-            </h3>
-            <p className="text-synth-text-muted">
-              Case {caseNumber} has {ticketCount} tickets - ALL missing components!
-            </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-3xl font-bold text-synth-status-error">
-            {ticketCount}
-          </div>
-          <div className="text-sm text-synth-text-muted">
-            tickets affected
-          </div>
-        </div>
-      </div>
+  const config = getAlertConfig();
 
-      <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(tickets || []).slice(0, 9).map((ticket, index) => {
-            const Icon = getComponentIcon(ticket.component);
-            return (
-              <div
-                key={ticket.key}
-                className="bg-synth-bg-hover border border-synth-border-secondary rounded-lg p-3 hover:border-synth-border-accent transition-colors cursor-pointer group"
-                onClick={() => window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank')}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Icon className="w-4 h-4 text-synth-text-muted" />
-                    <span className="font-mono text-synth-neon-cyan font-bold text-sm">
-                      {ticket.key}
-                    </span>
-                    <ExternalLink className="w-3 h-3 text-synth-text-muted group-hover:text-synth-neon-purple transition-colors" />
-                  </div>
-                </div>
-                <p className="text-synth-text-primary text-sm mb-2 line-clamp-2">
-                  {ticket.summary}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-synth-text-muted text-xs">
-                    {ticket.assignee}
-                  </span>
-                  <span className={`
-                    px-2 py-1 rounded text-xs font-medium border
-                    ${getStatusColor(ticket.status)}
-                  `}>
-                    {ticket.status}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+  return (
+    <Panel 
+      header={
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-3">
+            <div className={`text-${config.color}-400`}>
+              {config.icon}
+            </div>
+            <div>
+              <h3 className={`text-lg font-semibold text-${config.color}-400`}>
+                {config.title}
+              </h3>
+              <p className={`text-${config.color}-300 text-sm`}>
+                {config.description}
+              </p>
+            </div>
+          </div>
+          <Badge 
+            value={ticketCount} 
+            severity={config.severity}
+            className="text-lg px-3 py-1"
+          />
         </div>
+      }
+      className={`mb-4 ${config.headerClass}`}
+      toggleable
+      collapsed={false}
+    >
+      <div className="space-y-2">
+        {tickets.slice(0, 5).map((ticket) => (
+          <div 
+            key={ticket.key}
+            className={`flex items-center justify-between p-3 ${config.contentClass} rounded-lg hover:opacity-80 transition-opacity cursor-pointer`}
+            onClick={() => window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank')}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <span className={`font-mono text-${config.color}-300 font-bold`}>
+                {ticket.key}
+              </span>
+              <span className={`text-${config.color}-200 flex-1`}>
+                {ticket.summary}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge 
+                value={ticket.status} 
+                severity="info" 
+                className="text-xs"
+              />
+              <Badge 
+                value={ticket.assignee} 
+                severity="secondary" 
+                className="text-xs"
+              />
+              <ExternalLink className={`w-4 h-4 text-${config.color}-400`} />
+            </div>
+          </div>
+        ))}
         
-        {(tickets || []).length > 9 && (
-          <div className="mt-4 text-center">
-            <span className="text-synth-text-muted text-sm">
-              +{(tickets || []).length - 9} more tickets in this case
-            </span>
+        {tickets.length > 5 && (
+          <div className={`text-center text-${config.color}-300 text-sm`}>
+            ... and {tickets.length - 5} more tickets
           </div>
         )}
       </div>
 
-      <div className="mt-4 p-3 bg-synth-status-error/20 border border-synth-status-error/50 rounded-lg">
-        <div className="flex items-center space-x-2 text-synth-status-error font-medium">
-          <AlertTriangle className="w-4 h-4" />
-          <span>IMMEDIATE ACTION REQUIRED: All tickets need component assignment</span>
-        </div>
+      <div className="mt-4 flex justify-end">
+        <Button
+          label="View All Tickets"
+          icon={<ExternalLink className="w-4 h-4" />}
+          className={`p-button-outlined p-button-${config.color === 'red' ? 'danger' : config.color === 'orange' ? 'warning' : config.color === 'purple' ? 'info' : config.color === 'green' ? 'success' : 'info'}`}
+          onClick={() => {
+            console.log('View all tickets for:', caseNumber);
+          }}
+        />
       </div>
-    </div>
+    </Panel>
   );
 }

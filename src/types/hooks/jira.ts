@@ -5,6 +5,7 @@ export interface UseJiraDataReturn {
   data: JiraSearchResponse | null;
   loading: boolean;
   error: string | null;
+  refetch?: () => Promise<void>;
 }
 
 export interface UseJiraDataOptions {

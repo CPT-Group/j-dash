@@ -157,7 +157,7 @@ export default function TicketDetailsDialog({ ticket, visible, onHide }: TicketD
               {ticket.component}
             </span>
             {ticket.component === 'No Component' && (
-              <Badge value="Missing" severity="error" className="text-xs" />
+              <Badge value="Missing" severity="danger" className="text-xs" />
             )}
           </div>
         </div>
