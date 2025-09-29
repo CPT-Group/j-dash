@@ -1,0 +1,55 @@
+{
+  "name": "dark-synth-theme-xys",
+  "displayName": "Dark Synth",
+  "description": "A dark purple/cyan theme for Cursor IDE. A mix of Tokyo Night, Synthwave '84, and Celestial aesthetics.",
+  "version": "1.0.0",
+  "publisher": "XYIAN",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XYIAN/dark-synth-cursor.git"
+  },
+  "homepage": "https://github.com/XYIAN/dark-synth-cursor#readme",
+  "bugs": {
+    "url": "https://github.com/XYIAN/dark-synth-cursor/issues"
+  },
+  "engines": {
+    "vscode": "^1.46.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "theme",
+    "dark",
+    "purple",
+    "cyan",
+    "synthwave",
+    "cursor",
+    "ide",
+    "midnight-synth",
+    "tokyo-night",
+    "celestial"
+  ],
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0c0020",
+    "theme": "dark"
+  },
+  "contributes": {
+    "themes": [
+      {
+        "label": "Dark Synth",
+        "uiTheme": "vs-dark",
+        "path": "./themes/Dark Synth-color-theme.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build:dev": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.0"
+  }
+}

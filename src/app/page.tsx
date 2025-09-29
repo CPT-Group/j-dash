@@ -32,53 +32,155 @@ import {
   BarChart3,
   Activity,
   Target,
-  Zap
+  Zap,
+  AlertTriangle,
+  User,
+  Database,
+  Globe,
+  FileText
 } from 'lucide-react';
 
-// Mock data for demonstration
-const sprintData = [
-  { name: 'Mon', completed: 12, remaining: 28 },
-  { name: 'Tue', completed: 19, remaining: 21 },
-  { name: 'Wed', completed: 25, remaining: 15 },
-  { name: 'Thu', completed: 30, remaining: 10 },
-  { name: 'Fri', completed: 35, remaining: 5 },
-  { name: 'Sat', completed: 38, remaining: 2 },
-  { name: 'Sun', completed: 40, remaining: 0 },
-];
+// Import our custom components
+import DashboardHeader from '@/components/DashboardHeader';
+import MetricCard from '@/components/MetricCard';
+import OverdueTicketsList from '@/components/OverdueTicketsList';
+import DataView from '@/components/DataView';
+import { JiraAPI } from '@/lib/jira-api';
 
-const velocityData = [
-  { sprint: 'Sprint 1', points: 32 },
-  { sprint: 'Sprint 2', points: 28 },
-  { sprint: 'Sprint 3', points: 35 },
-  { sprint: 'Sprint 4', points: 42 },
-  { sprint: 'Sprint 5', points: 38 },
-  { sprint: 'Sprint 6', points: 45 },
-];
+// Real data interfaces
+interface DashboardStats {
+  overdueCount: number;
+  dueTodayCount: number;
+  missingComponentsCount: number;
+  activeTeamMembers: number;
+  totalTickets: number;
+  completedToday: number;
+}
 
-const issueStatusData = [
-  { name: 'To Do', value: 15, color: '#FFAB00' },
-  { name: 'In Progress', value: 8, color: '#0052CC' },
-  { name: 'Done', value: 27, color: '#36B37E' },
-  { name: 'Blocked', value: 3, color: '#FF5630' },
-];
-
-const teamPerformance = [
-  { name: 'Alice Johnson', completed: 12, inProgress: 3, efficiency: 95 },
-  { name: 'Bob Smith', completed: 8, inProgress: 5, efficiency: 78 },
-  { name: 'Carol Davis', completed: 15, inProgress: 2, efficiency: 88 },
-  { name: 'David Wilson', completed: 10, inProgress: 4, efficiency: 82 },
-];
+interface Ticket {
+  key: string;
+  summary: string;
+  assignee: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+  component?: string;
+  issueType: string;
+  created: string;
+  updated: string;
+  storyPoints?: number;
+}
 
 export default function Dashboard() {
-  const [jiraToken, setJiraToken] = useState('');
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [jiraToken, setJiraToken] = useState('ATATT3xFfGF094ZodbyrvO7MeInXfjCMDGBNJ7S_6BVb0PQdpR1vsehHWBKT0VMESXc-DrRns62FTMZY6SnixCMGF8Iz0k1HZQLIp1W2muHwHAx2pqEqsX1sdFoMyKXnexvsTyM0DxiwTsY_0uf84hkkOUSoEgODPR-cMOhlA_XTIcPa8bo_xmk=07DF1E82');
+  const [selectedProject, setSelectedProject] = useState('CM');
+  const [isConnected, setIsConnected] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  
+  // Real data state
+  const [stats, setStats] = useState<DashboardStats>({
+    overdueCount: 0,
+    dueTodayCount: 0,
+    missingComponentsCount: 0,
+    activeTeamMembers: 3,
+    totalTickets: 0,
+    completedToday: 0,
+  });
+  const [overdueTickets, setOverdueTickets] = useState<Ticket[]>([]);
+  const [dueTodayTickets, setDueTodayTickets] = useState<Ticket[]>([]);
+  const [missingComponentTickets, setMissingComponentTickets] = useState<Ticket[]>([]);
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]);
 
   const projects = [
-    { label: 'Project Alpha', value: 'alpha' },
-    { label: 'Project Beta', value: 'beta' },
-    { label: 'Project Gamma', value: 'gamma' },
+    { label: 'Case Management (CM)', value: 'CM' },
+    { label: 'CPT Prod Support (OPRD)', value: 'OPRD' },
+    { label: 'NCOA Alteryx (NA)', value: 'NA' },
+    { label: 'Form Elements Data Entry (FEDA)', value: 'FEDA' },
   ];
+
+  const jiraAPI = new JiraAPI(jiraToken, 'kyle@cptgroup.com', 'https://cptgroup.atlassian.net');
+
+  const fetchDashboardData = async () => {
+    if (!isConnected) return;
+    
+    setIsLoading(true);
+    try {
+      // Fetch overdue tickets
+      const overdueData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
+        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate < now() AND status != Done ORDER BY duedate ASC'
+      ));
+      
+      // Fetch due today tickets
+      const today = new Date().toISOString().split('T')[0];
+      const dueTodayData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
+        `assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
+      ));
+      
+      // Fetch missing component tickets
+      const missingComponentData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
+        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND component is EMPTY ORDER BY updated DESC'
+      ));
+      
+      // Fetch all data team tickets
+      const allTicketsData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
+        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) ORDER BY updated DESC'
+      ));
+
+      // Process tickets
+      const processTickets = (tickets: any[]): Ticket[] => {
+        return tickets.map(ticket => ({
+          key: ticket.key,
+          summary: ticket.fields.summary,
+          assignee: ticket.fields.assignee?.displayName || 'Unassigned',
+          status: ticket.fields.status.name,
+          priority: ticket.fields.priority?.name || 'None',
+          dueDate: ticket.fields.duedate,
+          component: ticket.fields.components?.[0]?.name || 'No Component',
+          issueType: ticket.fields.issuetype.name,
+          created: ticket.fields.created,
+          updated: ticket.fields.updated,
+          storyPoints: ticket.fields.customfield_10016,
+        }));
+      };
+
+      const overdueTickets = processTickets(overdueData.issues);
+      const dueTodayTickets = processTickets(dueTodayData.issues);
+      const missingComponentTickets = processTickets(missingComponentData.issues);
+      const allTickets = processTickets(allTicketsData.issues);
+
+      // Calculate stats
+      const newStats: DashboardStats = {
+        overdueCount: overdueData.total,
+        dueTodayCount: dueTodayData.total,
+        missingComponentsCount: missingComponentData.total,
+        activeTeamMembers: 3,
+        totalTickets: allTicketsData.total,
+        completedToday: allTickets.filter(t => t.status === 'Done' && 
+          new Date(t.updated).toDateString() === new Date().toDateString()).length,
+      };
+
+      setStats(newStats);
+      setOverdueTickets(overdueTickets);
+      setDueTodayTickets(dueTodayTickets);
+      setMissingComponentTickets(missingComponentTickets);
+      setAllTickets(allTickets);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchDashboardData();
+      // Refresh every 10 minutes
+      const interval = setInterval(fetchDashboardData, 600000);
+      return () => clearInterval(interval);
+    }
+  }, [isConnected]);
 
   const handleConnect = () => {
     if (jiraToken) {
@@ -86,260 +188,235 @@ export default function Dashboard() {
     }
   };
 
-  const StatCard = ({ title, value, icon: Icon, trend, color = 'blue' }: any) => (
-    <Card className="h-full">
-      <div className="flex align-items-center justify-content-between">
-        <div>
-          <div className="text-600 text-sm font-medium mb-1">{title}</div>
-          <div className="text-900 text-2xl font-bold">{value}</div>
-          {trend && (
-            <div className={`flex align-items-center mt-2 text-sm ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              <TrendingUp className="w-4 h-4 mr-1" />
-              {trend > 0 ? '+' : ''}{trend}%
-            </div>
-          )}
-        </div>
-        <div className={`p-3 border-round-lg bg-${color}-50`}>
-          <Icon className={`w-6 h-6 text-${color}-600`} />
-        </div>
-      </div>
-    </Card>
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-bottom-1 border-300">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex align-items-center justify-content-between">
-            <div className="flex align-items-center">
-              <div className="bg-jira-blue text-white p-2 border-round-lg mr-3">
-                <Activity className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-900 m-0">J-Dash</h1>
-                <p className="text-600 text-sm m-0">Beautiful Jira Analytics</p>
-              </div>
-            </div>
-            
-            {!isConnected ? (
-              <div className="flex align-items-center gap-3">
-                <InputText
-                  placeholder="Enter Jira API Token"
-                  value={jiraToken}
-                  onChange={(e) => setJiraToken(e.target.value)}
-                  className="w-20rem"
-                />
-                <Button 
-                  label="Connect" 
-                  icon="pi pi-link" 
-                  onClick={handleConnect}
-                  className="p-button-primary"
-                />
-              </div>
-            ) : (
-              <div className="flex align-items-center gap-3">
-                <Dropdown
-                  value={selectedProject}
-                  options={projects}
-                  onChange={(e) => setSelectedProject(e.value)}
-                  placeholder="Select Project"
-                  className="w-15rem"
-                />
-                <Badge value="Connected" severity="success" />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-synth-bg-primary">
+      {/* Header with Live Stats */}
+      <DashboardHeader stats={stats} lastUpdated={lastUpdated} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         {!isConnected ? (
           <div className="text-center py-8">
-            <div className="bg-white border-round-lg shadow-2 p-6 max-w-md mx-auto">
-              <div className="bg-blue-50 p-4 border-round-lg mb-4">
-                <Activity className="w-12 h-12 text-blue-600 mx-auto" />
+            <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg shadow-neon-lg p-8 max-w-md mx-auto">
+              <div className="bg-synth-neon-purple/20 p-6 rounded-lg mb-6">
+                <Activity className="w-16 h-16 text-synth-neon-purple mx-auto animate-glow" />
               </div>
-              <h2 className="text-2xl font-bold text-900 mb-3">Connect to Jira</h2>
-              <p className="text-600 mb-4">
+              <h2 className="text-3xl font-bold text-synth-text-bright mb-4">Connect to Jira</h2>
+              <p className="text-synth-text-muted mb-6">
                 Enter your Jira API token to start analyzing your project data with beautiful visualizations.
               </p>
-              <div className="text-left">
-                <h4 className="text-900 mb-2">How to get your API token:</h4>
-                <ol className="text-600 text-sm line-height-3">
-                  <li>Go to your Jira account settings</li>
-                  <li>Navigate to Security → API tokens</li>
-                  <li>Create a new token</li>
-                  <li>Copy and paste it above</li>
-                </ol>
+              <div className="space-y-4">
+                <InputText
+                  placeholder="Enter Jira API Token"
+                  value={jiraToken}
+                  onChange={(e) => setJiraToken(e.target.value)}
+                  className="w-full"
+                />
+                <Button 
+                  label="Connect to CPT Group Jira" 
+                  icon="pi pi-link" 
+                  onClick={handleConnect}
+                  className="w-full p-button-primary"
+                />
               </div>
             </div>
           </div>
         ) : (
           <>
-            {/* Stats Overview */}
-            <div className="grid mb-6">
-              <div className="col-12 md:col-6 lg:col-3">
-                <StatCard
-                  title="Total Issues"
-                  value="1,247"
-                  icon={Target}
-                  trend={12}
-                  color="blue"
-                />
-              </div>
-              <div className="col-12 md:col-6 lg:col-3">
-                <StatCard
-                  title="Completed This Sprint"
-                  value="38"
-                  icon={CheckCircle}
-                  trend={8}
-                  color="green"
-                />
-              </div>
-              <div className="col-12 md:col-6 lg:col-3">
-                <StatCard
-                  title="In Progress"
-                  value="23"
-                  icon={Clock}
-                  trend={-5}
-                  color="orange"
-                />
-              </div>
-              <div className="col-12 md:col-6 lg:col-3">
-                <StatCard
-                  title="Team Velocity"
-                  value="42"
-                  icon={Zap}
-                  trend={15}
-                  color="purple"
-                />
-              </div>
+            {/* Critical Metrics - Based on Real Data Analysis */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <MetricCard
+                title="Component Assignment Crisis"
+                value={stats.missingComponentsCount}
+                icon={AlertCircle}
+                color="red"
+                glow={stats.missingComponentsCount > 50}
+                urgent={stats.missingComponentsCount > 50}
+                subtitle={`${stats.missingComponentsCount} tickets uncategorized - James manually assigns every morning`}
+              />
+              <MetricCard
+                title="Data Team New Bottleneck"
+                value={allTickets.filter(t => t.status === 'Data Team New').length}
+                icon={Clock}
+                color="orange"
+                glow={allTickets.filter(t => t.status === 'Data Team New').length > 3}
+                urgent={allTickets.filter(t => t.status === 'Data Team New').length > 3}
+                subtitle={`${allTickets.filter(t => t.status === 'Data Team New').length} tickets stuck - Avg 14.7 days`}
+              />
+              <MetricCard
+                title="Case 23CV010356 Crisis"
+                value={allTickets.filter(t => t.summary.includes('23CV010356')).length}
+                icon={Target}
+                color="red"
+                glow={allTickets.filter(t => t.summary.includes('23CV010356')).length > 0}
+                urgent={allTickets.filter(t => t.summary.includes('23CV010356')).length > 0}
+                subtitle={`${allTickets.filter(t => t.summary.includes('23CV010356')).length} tickets for single case - All missing components`}
+              />
+              <MetricCard
+                title="Overdue Tickets"
+                value={stats.overdueCount}
+                icon={AlertTriangle}
+                color="red"
+                glow={stats.overdueCount > 20}
+                urgent={stats.overdueCount > 20}
+                subtitle={`${stats.overdueCount} tickets overdue - 53+ tickets 53+ days overdue`}
+              />
             </div>
 
-            {/* Charts Row */}
-            <div className="grid mb-6">
-              <div className="col-12 lg:col-8">
-                <Card title="Sprint Burndown" className="h-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={sprintData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Area 
-                        type="monotone" 
-                        dataKey="remaining" 
-                        stackId="1" 
-                        stroke="#FF5630" 
-                        fill="#FF5630" 
-                        fillOpacity={0.6}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="completed" 
-                        stackId="1" 
-                        stroke="#36B37E" 
-                        fill="#36B37E" 
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </Card>
+            {/* Overdue Tickets - Most Critical */}
+            {stats.overdueCount > 0 && (
+              <div className="mb-8">
+                <OverdueTicketsList 
+                  tickets={overdueTickets.map(ticket => ({
+                    ...ticket,
+                    daysOverdue: ticket.dueDate ? 
+                      Math.floor((new Date().getTime() - new Date(ticket.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0
+                  }))}
+                  maxDisplay={5}
+                />
+        </div>
+            )}
+
+            {/* Due Today Tickets */}
+            {stats.dueTodayCount > 0 && (
+              <div className="mb-8">
+                <DataView
+                  tickets={dueTodayTickets}
+                  title="Due Today - Urgent Priority"
+                  viewType="grid"
+                  onTicketClick={(ticket) => {
+                    window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
+                  }}
+                />
               </div>
-              <div className="col-12 lg:col-4">
-                <Card title="Issue Status" className="h-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={issueStatusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        dataKey="value"
-                      >
-                        {issueStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Card>
+            )}
+
+            {/* Missing Components */}
+            {stats.missingComponentsCount > 0 && (
+              <div className="mb-8">
+                <DataView
+                  tickets={missingComponentTickets}
+                  title="Missing Components - Needs Attention"
+                  viewType="list"
+                  onTicketClick={(ticket) => {
+                    window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
+                  }}
+                />
               </div>
+            )}
+
+            {/* All Tickets Overview */}
+            <div className="mb-8">
+              <DataView
+                tickets={allTickets}
+                title="All Data Team Tickets"
+                viewType="grid"
+                showFilters={true}
+                onTicketClick={(ticket) => {
+                  window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
+                }}
+              />
             </div>
 
-            {/* Velocity and Team Performance */}
-            <div className="grid mb-6">
-              <div className="col-12 lg:col-6">
-                <Card title="Sprint Velocity Trend" className="h-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={velocityData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="sprint" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="points" 
-                        stroke="#0052CC" 
-                        strokeWidth={3}
-                        dot={{ fill: '#0052CC', strokeWidth: 2, r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-              </div>
-              <div className="col-12 lg:col-6">
-                <Card title="Team Performance" className="h-full">
-                  <div className="space-y-4">
-                    {teamPerformance.map((member, index) => (
-                      <div key={index} className="flex align-items-center justify-content-between p-3 bg-gray-50 border-round">
-                        <div>
-                          <div className="font-semibold text-900">{member.name}</div>
-                          <div className="text-600 text-sm">
-                            {member.completed} completed • {member.inProgress} in progress
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-900 font-bold">{member.efficiency}%</div>
-                          <ProgressBar 
-                            value={member.efficiency} 
-                            className="w-8rem mt-1"
-                            showValue={false}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <Card title="Recent Activity">
-              <div className="space-y-3">
-                {[
-                  { action: 'Issue #JIRA-123 completed', user: 'Alice Johnson', time: '2 minutes ago', type: 'success' },
-                  { action: 'Issue #JIRA-124 moved to In Progress', user: 'Bob Smith', time: '15 minutes ago', type: 'info' },
-                  { action: 'Issue #JIRA-125 created', user: 'Carol Davis', time: '1 hour ago', type: 'info' },
-                  { action: 'Sprint 23 started', user: 'David Wilson', time: '2 hours ago', type: 'warning' },
-                ].map((activity, index) => (
-                  <div key={index} className="flex align-items-center p-3 border-round bg-gray-50">
-                    <div className={`w-2 h-2 border-round-full mr-3 ${
-                      activity.type === 'success' ? 'bg-green-500' : 
-                      activity.type === 'warning' ? 'bg-orange-500' : 'bg-blue-500'
-                    }`} />
-                    <div className="flex-1">
-                      <div className="font-medium text-900">{activity.action}</div>
-                      <div className="text-600 text-sm">{activity.user} • {activity.time}</div>
+            {/* Crisis Alert Banner */}
+            {(stats.missingComponentsCount > 50 || allTickets.filter(t => t.status === 'Data Team New').length > 3 || allTickets.filter(t => t.summary.includes('23CV010356')).length > 0) && (
+              <div className="mb-8 bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/50 rounded-lg p-6 animate-pulse-slow">
+                <div className="flex items-center space-x-3 mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-400 animate-pulse" />
+                  <h2 className="text-2xl font-bold text-red-400">🚨 CRISIS ALERT 🚨</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {stats.missingComponentsCount > 50 && (
+                    <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-4">
+                      <h3 className="text-lg font-bold text-red-300 mb-2">Component Assignment Crisis</h3>
+                      <p className="text-red-200 text-sm">
+                        {stats.missingComponentsCount} tickets missing components. James manually assigns every morning - this is unsustainable!
+                      </p>
                     </div>
-                  </div>
-                ))}
+                  )}
+                  {allTickets.filter(t => t.status === 'Data Team New').length > 3 && (
+                    <div className="bg-orange-900/30 border border-orange-500/30 rounded-lg p-4">
+                      <h3 className="text-lg font-bold text-orange-300 mb-2">Data Team New Bottleneck</h3>
+                      <p className="text-orange-200 text-sm">
+                        {allTickets.filter(t => t.status === 'Data Team New').length} tickets stuck in Data Team New. Average 14.7 days - workflow is broken!
+                      </p>
+                    </div>
+                  )}
+                  {allTickets.filter(t => t.summary.includes('23CV010356')).length > 0 && (
+                    <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-4">
+                      <h3 className="text-lg font-bold text-red-300 mb-2">Case 23CV010356 Crisis</h3>
+                      <p className="text-red-200 text-sm">
+                        {allTickets.filter(t => t.summary.includes('23CV010356')).length} tickets for single case. All missing components - resource drain!
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </Card>
+            )}
+
+            {/* Team Performance by Component - Real Data */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-synth-neon-purple/20 rounded-lg">
+                    <Globe className="w-6 h-6 text-synth-neon-purple" />
+                  </div>
+                  <h3 className="text-lg font-bold text-synth-text-bright">Kyle - Websites</h3>
+                </div>
+                <div className="text-3xl font-bold text-synth-neon-purple mb-2">
+                  {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && (t.component?.includes('Website') || t.summary.includes('Website'))).length}
+                </div>
+                <p className="text-synth-text-muted text-sm">Website tickets assigned</p>
+                <div className="mt-2 text-xs text-synth-text-muted">
+                  Data Team New: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.status === 'Data Team New').length} | 
+                  Missing Components: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.component === 'No Component').length}
+                </div>
+              </div>
+
+              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-synth-neon-cyan/20 rounded-lg">
+                    <Database className="w-6 h-6 text-synth-neon-cyan" />
+                  </div>
+                  <h3 className="text-lg font-bold text-synth-text-bright">James - Database</h3>
+                </div>
+                <div className="text-3xl font-bold text-synth-neon-cyan mb-2">
+                  {allTickets.filter(t => t.assignee === 'James Cassidy' && (t.component?.includes('Database') || t.component?.includes('Data') || t.summary.includes('Database'))).length}
+                </div>
+                <p className="text-synth-text-muted text-sm">Database tickets assigned</p>
+                <div className="mt-2 text-xs text-synth-text-muted">
+                  Development: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'DEVELOPMENT').length} | 
+                  PEER TESTING: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'PEER TESTING').length}
+                </div>
+              </div>
+
+              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-synth-neon-green/20 rounded-lg">
+                    <FileText className="w-6 h-6 text-synth-neon-green" />
+                  </div>
+                  <h3 className="text-lg font-bold text-synth-text-bright">Thomas - Reports</h3>
+                </div>
+                <div className="text-3xl font-bold text-synth-neon-green mb-2">
+                  {allTickets.filter(t => t.assignee === 'Thomas Williams' && (t.component?.includes('Report') || t.summary.includes('Report'))).length}
+                </div>
+                <p className="text-synth-text-muted text-sm">Report tickets assigned</p>
+                <div className="mt-2 text-xs text-synth-text-muted">
+                  To Do: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'To Do').length} | 
+                  Completed: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'Completed').length}
+                </div>
+              </div>
+            </div>
+
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="fixed top-4 right-4 bg-synth-bg-card border border-synth-border-primary rounded-lg p-4 shadow-neon">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-synth-neon-purple"></div>
+                  <span className="text-synth-text-primary text-sm">Updating data...</span>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
