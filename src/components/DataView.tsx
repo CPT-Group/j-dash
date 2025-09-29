@@ -82,7 +82,17 @@ export default function DataView({
       {filteredTickets.map((ticket) => (
         <TicketCard
           key={ticket.key}
-          {...ticket}
+          ticketKey={ticket.key}
+          summary={ticket.summary}
+          assignee={ticket.assignee}
+          status={ticket.status}
+          priority={ticket.priority}
+          dueDate={ticket.dueDate}
+          component={ticket.component}
+          issueType={ticket.issueType}
+          created={ticket.created}
+          updated={ticket.updated}
+          storyPoints={ticket.storyPoints}
           onClick={() => handleTicketClick(ticket)}
         />
       ))}

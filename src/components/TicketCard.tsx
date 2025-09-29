@@ -3,7 +3,7 @@
 import { ExternalLink, Clock, User, AlertCircle, CheckCircle, Play, Pause } from 'lucide-react';
 
 interface TicketCardProps {
-  key: string;
+  ticketKey: string;
   summary: string;
   assignee: string;
   status: string;
@@ -18,7 +18,7 @@ interface TicketCardProps {
 }
 
 export default function TicketCard({
-  key,
+  ticketKey,
   summary,
   assignee,
   status,
@@ -104,7 +104,7 @@ export default function TicketCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-2">
           <span className="font-mono text-synth-neon-cyan font-bold text-sm">
-            {key}
+            {ticketKey}
           </span>
           <ExternalLink className="w-3 h-3 text-synth-text-muted group-hover:text-synth-neon-purple transition-colors" />
         </div>

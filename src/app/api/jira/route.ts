@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const JIRA_DOMAIN = 'cptgroup.atlassian.net';
-const JIRA_EMAIL = 'kyle@cptgroup.com';
-const JIRA_TOKEN = 'ATATT3xFfGF094ZodbyrvO7MeInXfjCMDGBNJ7S_6BVb0PQdpR1vsehHWBKT0VMESXc-DrRns62FTMZY6SnixCMGF8Iz0k1HZQLIp1W2muHwHAx2pqEqsX1sdFoMyKXnexvsTyM0DxiwTsY_0uf84hkkOUSoEgODPR-cMOhlA_XTIcPa8bo_xmk=07DF1E82';
+const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
+const JIRA_USER_EMAIL = process.env.JIRA_USER_EMAIL;
+const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 
 async function makeJiraRequest(path: string, params: Record<string, string> = {}) {
-  const auth = Buffer.from(`${JIRA_EMAIL}:${JIRA_TOKEN}`).toString('base64');
+  if (!JIRA_API_TOKEN || !JIRA_USER_EMAIL || !JIRA_DOMAIN) {
+    throw new Error('Jira API credentials are not set in environment variables.');
+  }
+
+  const auth = Buffer.from(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`).toString('base64');
   
-  const url = new URL(`https://${JIRA_DOMAIN}/rest/api/3${path}`);
+  const url = new URL(`${JIRA_DOMAIN}/rest/api/3${path}`);
   
   // Add query parameters
   Object.entries(params).forEach(([key, value]) => {
@@ -36,6 +40,8 @@ export async function GET(request: NextRequest) {
     const endpoint = searchParams.get('endpoint');
     const jql = searchParams.get('jql');
 
+    console.log('API Request:', { endpoint, jql });
+
     if (!endpoint || !jql) {
       return NextResponse.json(
         { error: 'Missing endpoint or jql parameter' },
@@ -50,7 +56,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await makeJiraRequest('/search', { jql: jql });
+    console.log('Making Jira request with JQL:', jql);
+    const data = await makeJiraRequest(`/search?jql=${encodeURIComponent(jql)}`);
+    console.log('Jira response received, total issues:', data.total);
     
     return NextResponse.json(data);
   } catch (error) {

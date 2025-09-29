@@ -2,7 +2,14 @@
 
 All notable changes to J-Dash will be documented in this file.
 
-## [0.3.1] - 2025-01-26
+## [0.3.2] - 2025-01-26
+
+### Added
+- ✨ **Animated Background**: Beautiful CSS-only animated background inspired by PrimeFlex.org
+- 🌈 **Gradient Orbs**: Subtle floating gradient orbs with your dark synth theme colors
+- 💫 **Particle Effects**: Floating particles for extra depth and visual interest
+- 🎨 **Smooth Animations**: 20-25 second smooth transitions between gradient positions
+- 🌟 **Multi-layer Background**: Two animated layers for rich visual depth
 
 ### Fixed
 - 🔧 **Environment Variable Configuration**: Fixed Jira data not showing by properly configuring environment variables

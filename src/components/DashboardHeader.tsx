@@ -16,9 +16,10 @@ interface DashboardHeaderProps {
 }
 
 export default function DashboardHeader({ stats, lastUpdated }: DashboardHeaderProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -26,7 +27,8 @@ export default function DashboardHeader({ stats, lastUpdated }: DashboardHeaderP
     return () => clearInterval(timer);
   }, []);
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | null) => {
+    if (!date) return '--:--:-- --';
     return date.toLocaleTimeString('en-US', { 
       hour12: true, 
       hour: '2-digit', 
