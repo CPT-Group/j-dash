@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await makeJiraRequest('/search', { jql });
+    const data = await makeJiraRequest('/search', { jql: jql });
     
     return NextResponse.json(data);
   } catch (error) {
