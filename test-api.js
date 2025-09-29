@@ -39,7 +39,7 @@ function makeJiraRequest(path) {
 async function testJiraAPI() {
   try {
     console.log('Testing Jira API connection...');
-    const data = await makeJiraRequest('/search?jql=assignee in ("kyle@cptgroup.com") ORDER BY updated DESC');
+    const data = await makeJiraRequest('/rest/api/3/search?jql=' + encodeURIComponent('assignee in ("kyle@cptgroup.com") ORDER BY updated DESC'));
     console.log('Success! Total issues:', data.total);
     console.log('First issue:', data.issues[0]?.key);
   } catch (error) {

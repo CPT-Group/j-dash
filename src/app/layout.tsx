@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans antialiased bg-synth-bg-primary text-synth-text-primary`}
+        className={`${inter.variable} font-sans antialiased text-synth-text-primary`}
       >
         <PrimeReactProvider>
           {children}

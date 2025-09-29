@@ -65,7 +65,8 @@
 
 /* Global Styles */
 body {
-  background: var(--synth-bg-primary);
+  background: 
+    linear-gradient(45deg, #ff0000, #00ff00, #0000ff, #ffff00, #ff00ff, #00ffff) !important;
   color: var(--synth-text-primary);
   font-family: var(--font-inter), system-ui, sans-serif;
   margin: 0;
