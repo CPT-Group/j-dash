@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
 import { ProgressBar } from 'primereact/progressbar';
 import { Badge } from 'primereact/badge';
 import { 
@@ -45,7 +42,8 @@ import DashboardHeader from '@/components/DashboardHeader';
 import MetricCard from '@/components/MetricCard';
 import OverdueTicketsList from '@/components/OverdueTicketsList';
 import DataView from '@/components/DataView';
-import { JiraAPI } from '@/lib/jira-api';
+import ToastManager from '@/components/ToastManager';
+// JiraAPI is now used server-side only
 
 // Real data interfaces
 interface DashboardStats {
@@ -72,7 +70,6 @@ interface Ticket {
 }
 
 export default function Dashboard() {
-  const [jiraToken, setJiraToken] = useState('ATATT3xFfGF094ZodbyrvO7MeInXfjCMDGBNJ7S_6BVb0PQdpR1vsehHWBKT0VMESXc-DrRns62FTMZY6SnixCMGF8Iz0k1HZQLIp1W2muHwHAx2pqEqsX1sdFoMyKXnexvsTyM0DxiwTsY_0uf84hkkOUSoEgODPR-cMOhlA_XTIcPa8bo_xmk=07DF1E82');
   const [selectedProject, setSelectedProject] = useState('CM');
   const [isConnected, setIsConnected] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +88,12 @@ export default function Dashboard() {
   const [dueTodayTickets, setDueTodayTickets] = useState<Ticket[]>([]);
   const [missingComponentTickets, setMissingComponentTickets] = useState<Ticket[]>([]);
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
+  
+  // Previous state for toast comparisons
+  const [previousTickets, setPreviousTickets] = useState<Ticket[]>([]);
+  const [previousOverdueCount, setPreviousOverdueCount] = useState(0);
+  const [previousMissingComponentsCount, setPreviousMissingComponentsCount] = useState(0);
+  const [previousDataTeamNewCount, setPreviousDataTeamNewCount] = useState(0);
 
   const projects = [
     { label: 'Case Management (CM)', value: 'CM' },
@@ -99,7 +102,17 @@ export default function Dashboard() {
     { label: 'Form Elements Data Entry (FEDA)', value: 'FEDA' },
   ];
 
-  const jiraAPI = new JiraAPI(jiraToken, 'kyle@cptgroup.com', 'https://cptgroup.atlassian.net');
+  // Helper function to make API calls to our server-side route
+  const fetchJiraData = async (endpoint: string, params: Record<string, string> = {}) => {
+    const searchParams = new URLSearchParams({ endpoint, ...params });
+    const response = await fetch(`/api/jira?${searchParams}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    
+    return response.json();
+  };
 
   const fetchDashboardData = async () => {
     if (!isConnected) return;
@@ -107,25 +120,25 @@ export default function Dashboard() {
     setIsLoading(true);
     try {
       // Fetch overdue tickets
-      const overdueData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
-        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate < now() AND status != Done ORDER BY duedate ASC'
-      ));
+      const overdueData = await fetchJiraData('search', {
+        jql: 'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate < now() AND status != Done ORDER BY duedate ASC'
+      });
       
       // Fetch due today tickets
       const today = new Date().toISOString().split('T')[0];
-      const dueTodayData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
-        `assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
-      ));
+      const dueTodayData = await fetchJiraData('search', {
+        jql: `assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
+      });
       
       // Fetch missing component tickets
-      const missingComponentData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
-        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND component is EMPTY ORDER BY updated DESC'
-      ));
+      const missingComponentData = await fetchJiraData('search', {
+        jql: 'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) AND component is EMPTY ORDER BY updated DESC'
+      });
       
       // Fetch all data team tickets
-      const allTicketsData = await jiraAPI.makeRequest('/search?jql=' + encodeURIComponent(
-        'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) ORDER BY updated DESC'
-      ));
+      const allTicketsData = await fetchJiraData('search', {
+        jql: 'assignee in (kyle@cptgroup.com, james@cptgroup.com, thomas@cptgroup.com) ORDER BY updated DESC'
+      });
 
       // Process tickets
       const processTickets = (tickets: any[]): Ticket[] => {
@@ -160,6 +173,12 @@ export default function Dashboard() {
           new Date(t.updated).toDateString() === new Date().toDateString()).length,
       };
 
+      // Update previous state before setting new state
+      setPreviousTickets(allTickets);
+      setPreviousOverdueCount(stats.overdueCount);
+      setPreviousMissingComponentsCount(stats.missingComponentsCount);
+      setPreviousDataTeamNewCount(allTickets.filter(t => t.status === 'Data Team New').length);
+
       setStats(newStats);
       setOverdueTickets(overdueTickets);
       setDueTodayTickets(dueTodayTickets);
@@ -182,44 +201,46 @@ export default function Dashboard() {
     }
   }, [isConnected]);
 
-  const handleConnect = () => {
-    if (jiraToken) {
-      setIsConnected(true);
-    }
-  };
+  // Auto-connect since we're using environment variables
+  useEffect(() => {
+    setIsConnected(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-synth-bg-primary">
+      {/* Toast Notifications */}
+      <ToastManager
+        tickets={allTickets}
+        previousTickets={previousTickets}
+        overdueCount={stats.overdueCount}
+        previousOverdueCount={previousOverdueCount}
+        missingComponentsCount={stats.missingComponentsCount}
+        previousMissingComponentsCount={previousMissingComponentsCount}
+        dataTeamNewCount={allTickets.filter(t => t.status === 'Data Team New').length}
+        previousDataTeamNewCount={previousDataTeamNewCount}
+      />
+      
       {/* Header with Live Stats */}
       <DashboardHeader stats={stats} lastUpdated={lastUpdated} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         {!isConnected ? (
-          <div className="text-center py-8">
-            <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg shadow-neon-lg p-8 max-w-md mx-auto">
-              <div className="bg-synth-neon-purple/20 p-6 rounded-lg mb-6">
-                <Activity className="w-16 h-16 text-synth-neon-purple mx-auto animate-glow" />
+          <div className="flex justify-center items-center min-h-screen">
+            <Card className="w-full max-w-md">
+              <div className="text-center">
+                <div className="bg-synth-neon-purple/20 p-6 rounded-lg mb-6">
+                  <Activity className="w-16 h-16 text-synth-neon-purple mx-auto animate-glow" />
+                </div>
+                <h2 className="text-3xl font-bold text-synth-text-bright mb-4">Loading Jira Data</h2>
+                <p className="text-synth-text-muted mb-6">
+                  Connecting to CPT Group Jira and fetching your project data...
+                </p>
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-synth-neon-purple"></div>
+                </div>
               </div>
-              <h2 className="text-3xl font-bold text-synth-text-bright mb-4">Connect to Jira</h2>
-              <p className="text-synth-text-muted mb-6">
-                Enter your Jira API token to start analyzing your project data with beautiful visualizations.
-              </p>
-              <div className="space-y-4">
-                <InputText
-                  placeholder="Enter Jira API Token"
-                  value={jiraToken}
-                  onChange={(e) => setJiraToken(e.target.value)}
-                  className="w-full"
-                />
-                <Button 
-                  label="Connect to CPT Group Jira" 
-                  icon="pi pi-link" 
-                  onClick={handleConnect}
-                  className="w-full p-button-primary"
-                />
-              </div>
-            </div>
+            </Card>
           </div>
         ) : (
           <>
@@ -356,7 +377,7 @@ export default function Dashboard() {
 
             {/* Team Performance by Component - Real Data */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+              <Card>
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-synth-neon-purple/20 rounded-lg">
                     <Globe className="w-6 h-6 text-synth-neon-purple" />
@@ -371,9 +392,9 @@ export default function Dashboard() {
                   Data Team New: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.status === 'Data Team New').length} | 
                   Missing Components: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.component === 'No Component').length}
                 </div>
-              </div>
+              </Card>
 
-              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+              <Card>
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-synth-neon-cyan/20 rounded-lg">
                     <Database className="w-6 h-6 text-synth-neon-cyan" />
@@ -388,9 +409,9 @@ export default function Dashboard() {
                   Development: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'DEVELOPMENT').length} | 
                   PEER TESTING: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'PEER TESTING').length}
                 </div>
-              </div>
+              </Card>
 
-              <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-6">
+              <Card>
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-synth-neon-green/20 rounded-lg">
                     <FileText className="w-6 h-6 text-synth-neon-green" />
@@ -405,17 +426,17 @@ export default function Dashboard() {
                   To Do: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'To Do').length} | 
                   Completed: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'Completed').length}
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Loading Indicator */}
             {isLoading && (
-              <div className="fixed top-4 right-4 bg-synth-bg-card border border-synth-border-primary rounded-lg p-4 shadow-neon">
+              <Card className="fixed top-4 right-4 z-50">
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-synth-neon-purple"></div>
                   <span className="text-synth-text-primary text-sm">Updating data...</span>
                 </div>
-              </div>
+              </Card>
             )}
           </>
         )}

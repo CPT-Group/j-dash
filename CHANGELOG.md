@@ -2,6 +2,21 @@
 
 All notable changes to J-Dash will be documented in this file.
 
+## [0.3.1] - 2025-01-26
+
+### Fixed
+- 🔧 **Environment Variable Configuration**: Fixed Jira data not showing by properly configuring environment variables
+- 🔐 **Security Enhancement**: Moved Jira credentials from hardcoded values to secure environment variables
+- 🌐 **API Route Implementation**: Created server-side API route to handle Jira requests and avoid CORS issues
+- 📁 **Environment Files**: Added .env.local and .env.example files for proper configuration
+- 🚫 **Removed Hardcoded Credentials**: Eliminated security risk of hardcoded Jira token and email in source code
+
+### Technical Details
+- **Server-Side API**: Created `/api/jira` route to handle all Jira API calls server-side
+- **Environment Configuration**: Jira credentials now stored in `.env.local` file
+- **CORS Resolution**: Fixed potential CORS issues by moving API calls to server-side
+- **Security Best Practices**: Credentials no longer exposed in client-side code
+
 ## [0.3.0] - 2025-01-26
 
 ### Added
@@ -17,6 +32,17 @@ All notable changes to J-Dash will be documented in this file.
 - 🔧 **Custom Field Usage Tracking**: Analyzed 22 different custom fields
 - ⚡ **10-Minute Auto-Refresh**: Optimized refresh interval for real-time monitoring
 - 📚 **Comprehensive Documentation**: Detailed findings in docs/comprehensive-findings.md
+- 🍞 **Smart Toast Notification System**: Real-time alerts for critical issues
+- 🚨 **"Late Item on Entry - Unfair!" Alerts**: Immediate notification for overdue tickets
+- ⏰ **Due Today Urgent Alerts**: Sticky notifications for same-day due tickets
+- 🏷️ **Missing Component Alerts**: Notifications when James needs to assign components
+- 🔄 **Data Team New Bottleneck Alerts**: Workflow disruption notifications
+- 🎯 **Case Crisis Alerts**: Resource drain notifications for problematic cases
+- ⚠️ **High Priority No Due Date Alerts**: Planning issue notifications
+- 🐌 **Stuck Ticket Escalation Alerts**: 3+ day Data Team New notifications
+- 💥 **53+ Days Overdue Crisis Alerts**: Massive backlog notifications
+- ⚖️ **Team Workload Imbalance Alerts**: Work redistribution notifications
+- 📋 **Request Complete Bottleneck Alerts**: Approval process notifications
 
 ### Changed
 - 🎯 **Critical Metrics Priority**: Reordered to show most critical issues first

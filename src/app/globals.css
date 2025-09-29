@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
+/* Dark Synth Theme Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Colors */
+  --synth-bg-primary: #0a0a0f;
+  --synth-bg-secondary: #1a1a2e;
+  --synth-bg-tertiary: #16213e;
+  --synth-bg-card: #1e1e3f;
+  
+  /* Text Colors */
+  --synth-text-primary: #e0e0e0;
+  --synth-text-secondary: #b0b0b0;
+  --synth-text-muted: #808080;
+  --synth-text-bright: #ffffff;
+  
+  /* Neon Accent Colors */
+  --synth-neon-purple: #bb86fc;
+  --synth-neon-cyan: #03dac6;
+  --synth-neon-green: #4caf50;
+  --synth-neon-orange: #ff9800;
+  --synth-neon-yellow: #ffeb3b;
+  --synth-neon-blue: #2196f3;
+  --synth-neon-pink: #e91e63;
+  --synth-neon-lime: #cddc39;
+  
+  /* Status Colors */
+  --synth-success: #4caf50;
+  --synth-warning: #ff9800;
+  --synth-error: #f44336;
+  --synth-info: #2196f3;
+  
+  /* Border Colors */
+  --synth-border-primary: #2a2a4a;
+  --synth-border-secondary: #3a3a5a;
+  --synth-border-accent: #bb86fc;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-synth-bg-primary: var(--synth-bg-primary);
+  --color-synth-bg-secondary: var(--synth-bg-secondary);
+  --color-synth-bg-tertiary: var(--synth-bg-tertiary);
+  --color-synth-bg-card: var(--synth-bg-card);
+  --color-synth-text-primary: var(--synth-text-primary);
+  --color-synth-text-secondary: var(--synth-text-secondary);
+  --color-synth-text-muted: var(--synth-text-muted);
+  --color-synth-text-bright: var(--synth-text-bright);
+  --color-synth-neon-purple: var(--synth-neon-purple);
+  --color-synth-neon-cyan: var(--synth-neon-cyan);
+  --color-synth-neon-green: var(--synth-neon-green);
+  --color-synth-neon-orange: var(--synth-neon-orange);
+  --color-synth-neon-yellow: var(--synth-neon-yellow);
+  --color-synth-neon-blue: var(--synth-neon-blue);
+  --color-synth-neon-pink: var(--synth-neon-pink);
+  --color-synth-neon-lime: var(--synth-neon-lime);
+  --color-synth-success: var(--synth-success);
+  --color-synth-warning: var(--synth-warning);
+  --color-synth-error: var(--synth-error);
+  --color-synth-info: var(--synth-info);
+  --color-synth-border-primary: var(--synth-border-primary);
+  --color-synth-border-secondary: var(--synth-border-secondary);
+  --color-synth-border-accent: var(--synth-border-accent);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Global Styles */
+body {
+  background: var(--synth-bg-primary);
+  color: var(--synth-text-primary);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Custom Animations */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px var(--synth-neon-purple); }
+  50% { box-shadow: 0 0 20px var(--synth-neon-purple), 0 0 30px var(--synth-neon-purple); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { 
+    text-shadow: 0 0 5px var(--synth-neon-purple);
+    color: var(--synth-neon-purple);
+  }
+  50% { 
+    text-shadow: 0 0 20px var(--synth-neon-purple), 0 0 30px var(--synth-neon-purple);
+    color: var(--synth-text-bright);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* PrimeReact Dark Theme Overrides */
+.p-component {
+  background: var(--synth-bg-card) !important;
+  color: var(--synth-text-primary) !important;
+  border-color: var(--synth-border-primary) !important;
+}
+
+.p-card {
+  background: var(--synth-bg-card) !important;
+  border: 1px solid var(--synth-border-primary) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+
+.p-button {
+  background: var(--synth-neon-purple) !important;
+  border-color: var(--synth-neon-purple) !important;
+  color: var(--synth-text-bright) !important;
+}
+
+.p-button:hover {
+  background: var(--synth-neon-cyan) !important;
+  border-color: var(--synth-neon-cyan) !important;
+}
+
+.p-inputtext {
+  background: var(--synth-bg-secondary) !important;
+  border-color: var(--synth-border-primary) !important;
+  color: var(--synth-text-primary) !important;
+}
+
+.p-dropdown {
+  background: var(--synth-bg-secondary) !important;
+  border-color: var(--synth-border-primary) !important;
+  color: var(--synth-text-primary) !important;
+}
+
+.p-progressbar {
+  background: var(--synth-bg-secondary) !important;
+}
+
+.p-progressbar .p-progressbar-value {
+  background: var(--synth-neon-purple) !important;
+}
+
+.p-badge {
+  background: var(--synth-neon-purple) !important;
+  color: var(--synth-text-bright) !important;
 }
