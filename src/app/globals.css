@@ -66,7 +66,13 @@
 /* Global Styles */
 body {
   background: 
-    linear-gradient(45deg, #ff0000, #00ff00, #0000ff, #ffff00, #ff00ff, #00ffff) !important;
+    var(--synth-bg-primary),
+    radial-gradient(circle at 20% 80%, rgba(187, 134, 252, 0.25) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(3, 218, 198, 0.20) 0%, transparent 55%),
+    radial-gradient(circle at 40% 40%, rgba(76, 175, 80, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 60% 60%, rgba(255, 152, 0, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 90% 70%, rgba(33, 150, 243, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 10% 30%, rgba(233, 30, 99, 0.12) 0%, transparent 50%) !important;
   color: var(--synth-text-primary);
   font-family: var(--font-inter), system-ui, sans-serif;
   margin: 0;
@@ -74,6 +80,15 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
+  animation: backgroundShift 20s ease-in-out infinite !important;
+}
+
+/* Ensure main content doesn't override background */
+#__next, 
+#__next > div,
+main,
+[data-nextjs-scroll-focus-boundary] {
+  background: transparent !important;
 }
 
 /* Enhanced Animated Background */
