@@ -2,6 +2,29 @@
 
 All notable changes to J-Dash will be documented in this file.
 
+## [0.3.2] - 2025-01-29
+
+### Fixed
+- Fixed JQL queries to exclude truly completed tickets (Resolved with Done resolution)
+- Updated all hooks to use correct active status filtering
+- Removed fake CRISIS-001 alert and implemented real crisis detection
+- Dashboard now shows only active tickets requiring attention
+
+### Added
+- Real crisis detection system based on actual data patterns
+- Crisis alerts for overdue tickets (>10), missing components (>50), and data team bottlenecks (>5)
+- Comprehensive crisis analysis revealing massive system issues:
+  - 776 overdue tickets (100 critical 30+ days overdue)
+  - 12,174 tickets missing components (massive workflow breakdown)
+  - 13 Data Team New tickets (6 critical 30+ days old)
+  - 25:1 workload imbalance ratio (Laura Singh severely overloaded)
+- Updated documentation with real crisis findings and thresholds
+
+### Changed
+- Status classification: "Completed" is actually an active status, not completed
+- Crisis detection thresholds based on real data analysis
+- All JQL queries now properly filter out truly completed tickets
+
 ## [0.3.1] - 2025-09-28
 
 ### Added
