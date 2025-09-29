@@ -60,10 +60,18 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Making Jira request with JQL:', jql);
-    const data = await makeJiraRequest(`/search?jql=${encodeURIComponent(jql)}&maxResults=100`);
-    console.log('Jira response received, total issues:', data.total);
     
-    return NextResponse.json(data);
+    // Use the new /search/jql endpoint with fields parameter
+    const data = await makeJiraRequest(`/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,assignee,status,priority,duedate,components,issuetype,created,updated,customfield_10016`);
+    console.log('Jira response received, issue count:', data.issues?.length || 0);
+    
+    // Transform the response to match the expected format
+    const transformedData = {
+      total: data.issues?.length || 0,
+      issues: data.issues || []
+    };
+    
+    return NextResponse.json(transformedData);
   } catch (error) {
     console.error('Jira API error:', error);
     return NextResponse.json(
