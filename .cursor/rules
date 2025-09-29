@@ -1,0 +1,36 @@
+# J-Dash Development Rules
+
+## Code Quality & Standards
+- Never consider a task complete until explicitly approved by user
+- Always update CHANGELOG.md after every completed task
+- Never add or edit npm packages without explicit user approval
+- Always ask clarifying questions before making assumptions
+- Use functional components and proper separation of concerns
+- Follow TypeScript best practices with proper typing
+
+## Development Process
+- Research and understand requirements thoroughly before coding
+- Document findings extensively before implementation
+- Make API calls to understand data structure before building UI
+- Test with real data before considering features complete
+- Always validate assumptions with actual Jira data
+
+## File Organization
+- Keep components modular and reusable
+- Separate business logic from UI components
+- Use proper folder structure: components/, lib/, types/, docs/
+- Document all API endpoints and data structures
+
+## User Requirements
+- Primary purpose: CTO real-time analytics dashboard
+- Focus on: late items, near-late items, completion times, ticket frequency
+- Main categories: websites, database requests, weekly reports, bugs
+- Theme: sleek dark-purple neon (similar to VS Code dark-synth theme)
+- Data source: S:\Admin Cases folder structure and Jira tickets
+
+## Approval Required For
+- Any npm package additions or modifications
+- Major architectural changes
+- UI theme changes beyond approved design
+- Any modifications outside the codebase
+- Consideration of tasks as "complete"
