@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
-const JIRA_USER_EMAIL = process.env.JIRA_USER_EMAIL;
-const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
+const JIRA_USER_EMAIL = process.env.JIRA_EMAIL;
+const JIRA_DOMAIN = process.env.JIRA_BASE_URL;
 
 async function makeJiraRequest(path: string, params: Record<string, string> = {}) {
   if (!JIRA_API_TOKEN || !JIRA_USER_EMAIL || !JIRA_DOMAIN) {

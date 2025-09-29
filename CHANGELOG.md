@@ -2,6 +2,44 @@
 
 All notable changes to J-Dash will be documented in this file.
 
+## [0.3.4] - 2025-01-26
+
+### Fixed
+- 🎨 **Background Animation Visibility**: Fixed CSS-only animated background that wasn't showing
+- 🌈 **Theme Vibrancy**: Restored vibrant neon colors while keeping professional structure
+- ✨ **Enhanced Background Effects**: Increased opacity and visibility of gradient animations
+- 💫 **Particle Effects**: Made floating particles more visible and engaging
+- 🔧 **Color Balance**: Balanced VS Code structure with original synth theme vibrancy
+
+### Changed
+- 🎨 **Theme Colors**: Restored vibrant colors while maintaining professional layout
+  - Background: `#0a0a0f` (Dark but vibrant)
+  - Cards: `#1e1e3f` (Enhanced contrast)
+  - Text: `#e0e0e0` (High contrast)
+  - Accents: `#bb86fc` (Purple), `#03dac6` (Cyan), `#4caf50` (Green), `#ff9800` (Orange)
+- 🌟 **Background Opacity**: Increased to 0.03-0.10 for visible but subtle effects
+- ⏱️ **Animation Timing**: Optimized to 20-25 seconds for smooth, engaging feel
+- 💫 **Particle Size**: Increased to 3px with 0.15 opacity for better visibility
+
+## [0.3.3] - 2025-01-26
+
+### Added
+- 🎨 **VS Code Dark Theme**: Updated to match professional VS Code dark theme aesthetic
+- 🔧 **VS Code Color Palette**: Authentic VS Code colors for backgrounds, text, and accents
+- ✨ **Subtle Animated Background**: Refined animated background with VS Code-style subtlety
+- 🌈 **Professional Gradient Orbs**: Very subtle floating gradients using VS Code accent colors
+- 💫 **Minimal Particle Effects**: Tiny, barely visible particles for professional depth
+
+### Changed
+- 🎨 **Theme Colors**: Updated all colors to match VS Code Dark theme
+  - Background: `#1e1e1e` (VS Code dark)
+  - Cards: `#2d2d30` (VS Code panel)
+  - Text: `#cccccc` (VS Code text)
+  - Accents: `#569cd6` (VS Code blue), `#4ec9b0` (VS Code cyan), `#c586c0` (VS Code purple)
+- 🌟 **Background Opacity**: Reduced opacity to 0.01-0.03 for professional subtlety
+- ⏱️ **Animation Timing**: Slowed animations to 30-40 seconds for calm, professional feel
+- 🔧 **API Route Fix**: Fixed environment variable names in Jira API route
+
 ## [0.3.2] - 2025-01-26
 
 ### Added
