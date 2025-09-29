@@ -18,8 +18,9 @@ interface OverdueTicketsListProps {
 }
 
 export default function OverdueTicketsList({ tickets, maxDisplay = 10 }: OverdueTicketsListProps) {
-  const displayTickets = tickets.slice(0, maxDisplay);
-  const remainingCount = Math.max(0, tickets.length - maxDisplay);
+  const safeTickets = tickets || [];
+  const displayTickets = safeTickets.slice(0, maxDisplay);
+  const remainingCount = Math.max(0, safeTickets.length - maxDisplay);
 
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -52,7 +53,7 @@ export default function OverdueTicketsList({ tickets, maxDisplay = 10 }: Overdue
               Overdue Tickets
             </h3>
             <p className="text-synth-text-muted text-sm">
-              {tickets.length} total overdue tickets
+              {safeTickets.length} total overdue tickets
             </p>
           </div>
         </div>
@@ -115,7 +116,7 @@ export default function OverdueTicketsList({ tickets, maxDisplay = 10 }: Overdue
         ))}
       </div>
 
-      {tickets.length === 0 && (
+      {safeTickets.length === 0 && (
         <div className="text-center py-8">
           <div className="text-synth-neon-green text-4xl mb-2">✓</div>
           <p className="text-synth-text-muted">No overdue tickets!</p>

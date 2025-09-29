@@ -1,52 +1,41 @@
 'use client';
 
 import { Card } from 'primereact/card';
-import { LucideIcon } from 'lucide-react';
-
-interface MetricCardProps {
-  title: string;
-  value: string | number;
-  icon: LucideIcon;
-  trend?: number;
-  color: 'purple' | 'cyan' | 'green' | 'orange' | 'red' | 'yellow' | 'blue' | 'pink';
-  glow?: boolean;
-  urgent?: boolean;
-  subtitle?: string;
-}
+import { MetricCardProps } from '@/types';
 
 export default function MetricCard({ 
   title, 
   value, 
-  icon: Icon, 
+  icon, 
   trend, 
-  color, 
-  glow = false,
+  color = 'purple', 
+  glow = false, 
   urgent = false,
   subtitle
 }: MetricCardProps) {
   const colorClasses = {
-    purple: 'text-synth-neon-purple bg-synth-neon-purple/10 border-synth-neon-purple/30',
-    cyan: 'text-synth-neon-cyan bg-synth-neon-cyan/10 border-synth-neon-cyan/30',
-    green: 'text-synth-neon-green bg-synth-neon-green/10 border-synth-neon-green/30',
-    orange: 'text-synth-neon-orange bg-synth-neon-orange/10 border-synth-neon-orange/30',
-    red: 'text-synth-error bg-synth-error/10 border-synth-error/30',
-    yellow: 'text-synth-neon-yellow bg-synth-neon-yellow/10 border-synth-neon-yellow/30',
-    blue: 'text-synth-neon-blue bg-synth-neon-blue/10 border-synth-neon-blue/30',
-    pink: 'text-synth-neon-pink bg-synth-neon-pink/10 border-synth-neon-pink/30',
+    purple: 'border-synth-neon-purple bg-synth-bg-card',
+    cyan: 'border-synth-neon-cyan bg-synth-bg-card',
+    green: 'border-synth-neon-green bg-synth-bg-card',
+    orange: 'border-synth-neon-orange bg-synth-bg-card',
+    red: 'border-synth-error bg-synth-bg-card',
+    yellow: 'border-synth-warning bg-synth-bg-card',
+    blue: 'border-synth-info bg-synth-bg-card',
+    pink: 'border-synth-accent bg-synth-bg-card',
   };
 
   return (
     <Card className={`
-      h-full transition-all duration-300 hover:scale-105
+      ${urgent ? 'border-2 border-synth-error' : 'border border-synth-border-primary'}
       ${glow ? 'animate-glow' : ''}
-      ${urgent ? 'animate-neon-pulse' : ''}
+      transition-all duration-300 hover:scale-105
     `}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between p-6">
         <div className="flex-1">
-          <div className="text-synth-text-muted text-sm font-medium mb-2">
+          <h3 className="text-lg font-semibold text-synth-text-bright mb-2">
             {title}
-          </div>
-          <div className="text-synth-text-bright text-3xl font-bold mb-2">
+          </h3>
+          <div className="text-3xl font-bold text-synth-text-primary mb-2">
             {value}
           </div>
           {subtitle && (
@@ -68,10 +57,12 @@ export default function MetricCard({
         </div>
         <div className={`
           p-4 rounded-lg border-2
-          ${colorClasses[color]}
+          ${colorClasses[color || 'purple']}
           ${glow ? 'animate-glow' : ''}
         `}>
-          <Icon className={`w-8 h-8 ${urgent ? 'animate-neon-pulse' : ''}`} />
+          <div className={`w-8 h-8 ${urgent ? 'animate-neon-pulse' : ''}`}>
+            {icon}
+          </div>
         </div>
       </div>
     </Card>

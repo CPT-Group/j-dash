@@ -3,9 +3,9 @@
 import { AlertTriangle, ExternalLink, Users, Database, Globe } from 'lucide-react';
 
 interface CaseCrisisAlertProps {
-  caseNumber: string;
-  ticketCount: number;
-  tickets: Array<{
+  caseNumber?: string;
+  ticketCount?: number;
+  tickets?: Array<{
     key: string;
     summary: string;
     assignee: string;
@@ -62,7 +62,7 @@ export default function CaseCrisisAlert({ caseNumber, ticketCount, tickets }: Ca
 
       <div className="bg-synth-bg-card border border-synth-border-primary rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tickets.slice(0, 9).map((ticket, index) => {
+          {(tickets || []).slice(0, 9).map((ticket, index) => {
             const Icon = getComponentIcon(ticket.component);
             return (
               <div
@@ -98,10 +98,10 @@ export default function CaseCrisisAlert({ caseNumber, ticketCount, tickets }: Ca
           })}
         </div>
         
-        {tickets.length > 9 && (
+        {(tickets || []).length > 9 && (
           <div className="mt-4 text-center">
             <span className="text-synth-text-muted text-sm">
-              +{tickets.length - 9} more tickets in this case
+              +{(tickets || []).length - 9} more tickets in this case
             </span>
           </div>
         )}

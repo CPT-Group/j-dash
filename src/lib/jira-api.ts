@@ -1,3 +1,21 @@
+import { 
+  JiraProjectResponse, 
+  JiraIssueResponse, 
+  JiraSprintResponse, 
+  JiraSearchResponse,
+  JiraSearchParams,
+  JiraCreateIssueParams,
+  JiraUpdateIssueParams
+} from '@/types/api/jira';
+
+// Internal domain models
+export interface JiraProject {
+  id: string;
+  key: string;
+  name: string;
+  projectTypeKey: string;
+}
+
 export interface JiraIssue {
   id: string;
   key: string;
@@ -20,13 +38,6 @@ export interface JiraSprint {
   completeDate?: string;
 }
 
-export interface JiraProject {
-  id: string;
-  key: string;
-  name: string;
-  projectTypeKey: string;
-}
-
 export class JiraAPI {
   private baseUrl: string;
   private token: string;
@@ -35,11 +46,11 @@ export class JiraAPI {
   constructor(token: string, email: string, baseUrl: string) {
     this.token = token;
     this.email = email;
-    this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.baseUrl = baseUrl;
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const url = `${this.baseUrl}/rest/api/3${endpoint}`;
+  private async makeRequest<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}/rest/api/3${path}`;
     
     const response = await fetch(url, {
       ...options,
@@ -59,8 +70,8 @@ export class JiraAPI {
   }
 
   async getProjects(): Promise<JiraProject[]> {
-    const data = await this.makeRequest('/project');
-    return data.map((project: any) => ({
+    const data = await this.makeRequest<JiraProjectResponse[]>('/project');
+    return data.map((project) => ({
       id: project.id,
       key: project.key,
       name: project.name,
@@ -71,54 +82,9 @@ export class JiraAPI {
   async getIssues(projectKey: string, jql: string = ''): Promise<JiraIssue[]> {
     const jqlQuery = jql || `project = ${projectKey} ORDER BY updated DESC`;
     
-    const data = await this.makeRequest(`/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=100`);
+    const data = await this.makeRequest<JiraSearchResponse>(`/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=100`);
     
-    return data.issues.map((issue: any) => ({
-      id: issue.id,
-      key: issue.key,
-      summary: issue.fields.summary,
-      status: issue.fields.status.name,
-      assignee: issue.fields.assignee?.displayName,
-      priority: issue.fields.priority?.name || 'None',
-      issueType: issue.fields.issuetype.name,
-      created: issue.fields.created,
-      updated: issue.fields.updated,
-      storyPoints: issue.fields.customfield_10016, // Common story points field
-    }));
-  }
-
-  async getSprints(projectKey: string): Promise<JiraSprint[]> {
-    try {
-      const data = await this.makeRequest(`/sprint/search?query=${projectKey}`);
-      return data.values.map((sprint: any) => ({
-        id: sprint.id,
-        name: sprint.name,
-        state: sprint.state,
-        startDate: sprint.startDate,
-        endDate: sprint.endDate,
-        completeDate: sprint.completeDate,
-      }));
-    } catch (error) {
-      console.warn('Sprint data not available:', error);
-      return [];
-    }
-  }
-
-  async getCurrentSprint(projectKey: string): Promise<JiraSprint | null> {
-    const sprints = await this.getSprints(projectKey);
-    const now = new Date();
-    
-    return sprints.find(sprint => {
-      const startDate = new Date(sprint.startDate);
-      const endDate = new Date(sprint.endDate);
-      return sprint.state === 'ACTIVE' && now >= startDate && now <= endDate;
-    }) || null;
-  }
-
-  async getSprintIssues(sprintId: number): Promise<JiraIssue[]> {
-    const data = await this.makeRequest(`/sprint/${sprintId}/issue?maxResults=100`);
-    
-    return data.issues.map((issue: any) => ({
+    return (data?.issues || []).map((issue) => ({
       id: issue.id,
       key: issue.key,
       summary: issue.fields.summary,
@@ -132,22 +98,53 @@ export class JiraAPI {
     }));
   }
 
-  async getIssueTransitions(issueKey: string) {
-    const data = await this.makeRequest(`/issue/${issueKey}/transitions`);
-    return data.transitions;
+  async getSprints(projectKey: string): Promise<JiraSprint[]> {
+    try {
+      const data = await this.makeRequest<{ values: JiraSprintResponse[] }>(`/sprint/search?query=${projectKey}`);
+      return data.values.map((sprint) => ({
+        id: sprint.id,
+        name: sprint.name,
+        state: sprint.state,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+        completeDate: sprint.completeDate,
+      }));
+    } catch (error) {
+      console.warn('Failed to fetch sprints:', error);
+      return [];
+    }
   }
 
-  async transitionIssue(issueKey: string, transitionId: string) {
-    return this.makeRequest(`/issue/${issueKey}/transitions`, {
-      method: 'POST',
-      body: JSON.stringify({
-        transition: { id: transitionId }
-      }),
-    });
+  async getActiveSprint(projectKey: string): Promise<JiraSprint | null> {
+    const sprints = await this.getSprints(projectKey);
+    const now = new Date();
+    
+    return sprints.find(sprint => {
+      const startDate = new Date(sprint.startDate);
+      const endDate = new Date(sprint.endDate);
+      return sprint.state === 'ACTIVE' && now >= startDate && now <= endDate;
+    }) || null;
+  }
+
+  async getSprintIssues(sprintId: number): Promise<JiraIssue[]> {
+    const data = await this.makeRequest<JiraSearchResponse>(`/sprint/${sprintId}/issue?maxResults=100`);
+    
+    return (data?.issues || []).map((issue) => ({
+      id: issue.id,
+      key: issue.key,
+      summary: issue.fields.summary,
+      status: issue.fields.status.name,
+      assignee: issue.fields.assignee?.displayName,
+      priority: issue.fields.priority?.name || 'None',
+      issueType: issue.fields.issuetype.name,
+      created: issue.fields.created,
+      updated: issue.fields.updated,
+      storyPoints: issue.fields.customfield_10016,
+    }));
   }
 
   // Analytics helper methods
-  async getSprintBurndownData(sprintId: number): Promise<any[]> {
+  async getSprintBurndownData(sprintId: number): Promise<{ date: string; completed: number; remaining: number }[]> {
     // This would typically require additional Jira add-ons or custom implementation
     // For now, return mock data structure
     return [
@@ -161,11 +158,11 @@ export class JiraAPI {
     ];
   }
 
-  async getVelocityData(projectKey: string, sprintsCount: number = 6): Promise<any[]> {
+  async getVelocityData(projectKey: string, sprintsCount: number = 6): Promise<{ sprint: string; velocity: number }[]> {
     const sprints = await this.getSprints(projectKey);
-    const recentSprints = sprints.slice(-sprintsCount);
+    const recentSprints = (sprints || []).slice(-sprintsCount);
     
-    const velocityData = [];
+    const velocityData: { sprint: string; velocity: number }[] = [];
     for (const sprint of recentSprints) {
       const issues = await this.getSprintIssues(sprint.id);
       const completedPoints = issues
@@ -174,64 +171,67 @@ export class JiraAPI {
       
       velocityData.push({
         sprint: sprint.name,
-        points: completedPoints,
-        startDate: sprint.startDate,
-        endDate: sprint.endDate,
+        velocity: completedPoints,
       });
     }
     
     return velocityData;
   }
 
-  async getTeamPerformance(projectKey: string): Promise<any[]> {
+  async getTeamPerformance(projectKey: string): Promise<{ assignee: string; totalIssues: number; completedIssues: number; completionRate: number }[]> {
     const issues = await this.getIssues(projectKey);
-    const assigneeStats = new Map();
+    const assigneeStats = new Map<string, { total: number; completed: number }>();
     
     issues.forEach(issue => {
       if (issue.assignee) {
-        if (!assigneeStats.has(issue.assignee)) {
-          assigneeStats.set(issue.assignee, {
-            name: issue.assignee,
-            completed: 0,
-            inProgress: 0,
-            total: 0,
-          });
-        }
-        
-        const stats = assigneeStats.get(issue.assignee);
+        const stats = assigneeStats.get(issue.assignee) || { total: 0, completed: 0 };
         stats.total++;
-        
         if (issue.status === 'Done') {
           stats.completed++;
-        } else if (issue.status === 'In Progress') {
-          stats.inProgress++;
         }
+        assigneeStats.set(issue.assignee, stats);
       }
     });
-    
-    return Array.from(assigneeStats.values()).map(stats => ({
-      ...stats,
-      efficiency: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0,
+
+    return Array.from(assigneeStats.entries()).map(([assignee, stats]) => ({
+      assignee,
+      totalIssues: stats.total,
+      completedIssues: stats.completed,
+      completionRate: stats.total > 0 ? (stats.completed / stats.total) * 100 : 0,
     }));
   }
-}
 
-// Utility function to parse Jira token and extract email
-export function parseJiraToken(token: string): { email: string; baseUrl: string } | null {
-  // This is a simplified parser - in a real app, you'd want more robust validation
-  // The token format is typically: ATATT3xFfGF0...@domain.com
-  const emailMatch = token.match(/@([^=]+)/);
-  if (!emailMatch) {
-    throw new Error('Invalid Jira token format. Please ensure you have a valid API token.');
+  // CRUD operations
+  async createIssue(params: JiraCreateIssueParams): Promise<JiraIssue> {
+    const response = await this.makeRequest<JiraIssueResponse>('/issue', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+
+    return {
+      id: response.id,
+      key: response.key,
+      summary: response.fields.summary,
+      status: response.fields.status.name,
+      assignee: response.fields.assignee?.displayName,
+      priority: response.fields.priority?.name || 'None',
+      issueType: response.fields.issuetype.name,
+      created: response.fields.created,
+      updated: response.fields.updated,
+      storyPoints: response.fields.customfield_10016,
+    };
   }
-  
-  // Extract domain and construct base URL
-  const domain = emailMatch[1];
-  const baseUrl = `https://${domain}.atlassian.net`;
-  
-  // Extract email from token (this is a simplified approach)
-  // In practice, you might need to ask the user for their email separately
-  const email = `user@${domain}`; // This would need to be provided by the user
-  
-  return { email, baseUrl };
+
+  async updateIssue(issueKey: string, params: JiraUpdateIssueParams): Promise<void> {
+    await this.makeRequest(`/issue/${issueKey}`, {
+      method: 'PUT',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async deleteIssue(issueKey: string): Promise<void> {
+    await this.makeRequest(`/issue/${issueKey}`, {
+      method: 'DELETE',
+    });
+  }
 }

@@ -2,18 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Toast } from 'primereact/toast';
-import { Ticket } from '@/app/page';
-
-interface ToastManagerProps {
-  tickets: Ticket[];
-  previousTickets: Ticket[];
-  overdueCount: number;
-  previousOverdueCount: number;
-  missingComponentsCount: number;
-  previousMissingComponentsCount: number;
-  dataTeamNewCount: number;
-  previousDataTeamNewCount: number;
-}
+import { Ticket, ToastManagerProps } from '@/types';
 
 export default function ToastManager({
   tickets,

@@ -2,6 +2,55 @@
 
 All notable changes to J-Dash will be documented in this file.
 
+## [0.3.1] - 2025-09-28
+
+### Added
+- Complete component architecture refactor with modular design
+- Custom hooks for Jira data fetching (useOverdueTickets, useDueTodayTickets, etc.)
+- TypeScript types file for shared interfaces
+- Layout components (DashboardLayout)
+- Data components (MetricGrid)
+- Analytics components (OverdueAnalytics)
+- Proper separation of concerns and reusable components
+
+### Fixed
+- Jira API 410 Gone error by using correct endpoint (/rest/api/3/search/jql)
+- All TypeScript build errors and type safety issues
+- Removed all hardcoded API secrets from codebase
+- Fixed MetricCard to accept ReactNode icons instead of LucideIcon
+- Cleaned up git history to remove sensitive data
+
+### Changed
+- Main dashboard now uses new component architecture
+- All API calls now use environment variables for credentials
+- Improved code organization and maintainability
+- Better error handling and loading states
+
+## [0.3.6] - 2025-01-26
+
+### Fixed
+- 🐛 **Runtime TypeError Fixes**: Fixed all "Cannot read properties of undefined (reading 'slice')" errors
+- 🐛 **toLocaleString() Errors**: Fixed "Cannot read properties of undefined (reading 'toLocaleString')" errors
+- 🐛 **map() Errors**: Fixed "Cannot read properties of undefined (reading 'map')" errors in Dashboard component
+- 🛡️ **Null Safety**: Added proper null/undefined checks for all array operations and property access
+- 🔧 **CaseCrisisAlert Component**: Fixed undefined tickets prop causing runtime crashes
+- 📊 **Dashboard Component**: Fixed type mismatch between JiraIssueResponse and Ticket interfaces
+- 🎯 **DataView Component**: Added safe array handling for ticket filtering and mapping
+- 📋 **OverdueTicketsList Component**: Added null safety for tickets array operations
+- 🔌 **Jira API**: Fixed potential undefined array issues in getVelocityData and other methods
+- 🍞 **ToastManager Component**: Fixed type mismatch by properly transforming JiraIssueResponse to Ticket format
+- 🎨 **Type Safety**: Improved type safety across all components with proper data transformation
+- 🔧 **Transform Utilities**: Ensured all Jira data transformations use safe property access
+
+### Technical Details
+- **Array Safety**: All `.slice()`, `.map()`, `.filter()` operations now use safe fallbacks
+- **Property Safety**: All `.total`, `.issues`, `.toLocaleString()` calls now use safe access
+- **Data Transformation**: Proper mapping from JiraIssueResponse to Ticket interface using utility functions
+- **Null Coalescing**: Used `|| []` and `|| 0` patterns for safe operations
+- **Type Guards**: Added proper type checking before array operations
+- **Jira API Safety**: Fixed all API response handling to prevent undefined property access
+- **Transform Safety**: All Jira data transformations now use conditional checks before calling transform functions
+
 ## [0.3.5] - 2025-01-26
 
 ### Added

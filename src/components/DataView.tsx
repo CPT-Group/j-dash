@@ -39,12 +39,13 @@ export default function DataView({
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
 
   // Get unique values for filters
-  const statuses = [...new Set(tickets.map(t => t.status))];
-  const priorities = [...new Set(tickets.map(t => t.priority))];
-  const assignees = [...new Set(tickets.map(t => t.assignee))];
+  const safeTickets = tickets || [];
+  const statuses = [...new Set(safeTickets.map(t => t.status))];
+  const priorities = [...new Set(safeTickets.map(t => t.priority))];
+  const assignees = [...new Set(safeTickets.map(t => t.assignee))];
 
   // Filter tickets
-  const filteredTickets = tickets.filter(ticket => {
+  const filteredTickets = safeTickets.filter(ticket => {
     const statusMatch = filterStatus === 'all' || ticket.status === filterStatus;
     const priorityMatch = filterPriority === 'all' || ticket.priority === filterPriority;
     const assigneeMatch = filterAssignee === 'all' || ticket.assignee === filterAssignee;

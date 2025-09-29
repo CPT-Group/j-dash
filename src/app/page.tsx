@@ -2,562 +2,180 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
-import { ProgressBar } from 'primereact/progressbar';
-import { Badge } from 'primereact/badge';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  Area,
-  AreaChart
-} from 'recharts';
-import { 
-  TrendingUp, 
-  Users, 
-  CheckCircle, 
+  AlertTriangle, 
   Clock, 
-  AlertCircle,
-  BarChart3,
-  Activity,
-  Target,
-  Zap,
-  AlertTriangle,
-  User,
-  Database,
-  Globe,
-  FileText
+  Users, 
+  Database, 
+  FileText,
+  Activity
 } from 'lucide-react';
 
-// Import our custom components
-import DashboardHeader from '@/components/DashboardHeader';
-import MetricCard from '@/components/MetricCard';
-import OverdueTicketsList from '@/components/OverdueTicketsList';
+// Import new component architecture
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import MetricGrid from '@/components/data/MetricGrid';
+import OverdueAnalytics from '@/components/analytics/OverdueAnalytics';
 import DataView from '@/components/DataView';
+import CaseCrisisAlert from '@/components/CaseCrisisAlert';
 import ToastManager from '@/components/ToastManager';
-// JiraAPI is now used server-side only
-
-// Real data interfaces
-interface DashboardStats {
-  overdueCount: number;
-  dueTodayCount: number;
-  missingComponentsCount: number;
-  activeTeamMembers: number;
-  totalTickets: number;
-  completedToday: number;
-}
-
-interface Ticket {
-  key: string;
-  summary: string;
-  assignee: string;
-  status: string;
-  priority: string;
-  dueDate?: string;
-  component?: string;
-  issueType: string;
-  created: string;
-  updated: string;
-  storyPoints?: number;
-}
+import { useOverdueTickets, useDueTodayTickets, useMissingComponentTickets, useDataTeamNewTickets, useAllTickets } from '@/hooks/useJiraData';
+import { DashboardStats } from '@/types';
+import { transformJiraIssuesToTickets } from '@/utils/jira-transform';
 
 export default function Dashboard() {
-  const [selectedProject, setSelectedProject] = useState('CM');
-  const [isConnected, setIsConnected] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  
-  // Real data state
   const [stats, setStats] = useState<DashboardStats>({
     overdueCount: 0,
     dueTodayCount: 0,
     missingComponentsCount: 0,
-    activeTeamMembers: 3,
+    dataTeamNewCount: 0,
     totalTickets: 0,
-    completedToday: 0,
+    teamPerformance: { kyle: 0, james: 0, thomas: 0 }
   });
-  const [overdueTickets, setOverdueTickets] = useState<Ticket[]>([]);
-  const [dueTodayTickets, setDueTodayTickets] = useState<Ticket[]>([]);
-  const [missingComponentTickets, setMissingComponentTickets] = useState<Ticket[]>([]);
-  const [allTickets, setAllTickets] = useState<Ticket[]>([]);
-  
-  // Previous state for toast comparisons
-  const [previousTickets, setPreviousTickets] = useState<Ticket[]>([]);
-  const [previousOverdueCount, setPreviousOverdueCount] = useState(0);
-  const [previousMissingComponentsCount, setPreviousMissingComponentsCount] = useState(0);
-  const [previousDataTeamNewCount, setPreviousDataTeamNewCount] = useState(0);
 
-  const projects = [
-    { label: 'Case Management (CM)', value: 'CM' },
-    { label: 'CPT Prod Support (OPRD)', value: 'OPRD' },
-    { label: 'NCOA Alteryx (NA)', value: 'NA' },
-    { label: 'Form Elements Data Entry (FEDA)', value: 'FEDA' },
+  // Use custom hooks for data fetching
+  const { data: overdueData, loading: overdueLoading } = useOverdueTickets();
+  const { data: dueTodayData, loading: dueTodayLoading } = useDueTodayTickets();
+  const { data: missingComponentData, loading: missingComponentLoading } = useMissingComponentTickets();
+  const { data: dataTeamNewData, loading: dataTeamNewLoading } = useDataTeamNewTickets();
+  const { data: allTicketsData, loading: allTicketsLoading } = useAllTickets();
+
+  // Update stats when data changes
+  useEffect(() => {
+    setStats({
+      overdueCount: overdueData?.total || 0,
+      dueTodayCount: dueTodayData?.total || 0,
+      missingComponentsCount: missingComponentData?.total || 0,
+      dataTeamNewCount: dataTeamNewData?.total || 0,
+      totalTickets: allTicketsData?.total || 0,
+      teamPerformance: {
+        kyle: allTicketsData?.issues?.filter(t => t.fields.assignee?.displayName === 'Kyle Dilbeck').length || 0,
+        james: allTicketsData?.issues?.filter(t => t.fields.assignee?.displayName === 'James Cassidy').length || 0,
+        thomas: allTicketsData?.issues?.filter(t => t.fields.assignee?.displayName === 'Thomas Williams').length || 0
+      }
+    });
+  }, [overdueData, dueTodayData, missingComponentData, dataTeamNewData, allTicketsData]);
+
+  // Define metrics for the grid
+  const metrics = [
+    {
+      title: 'Overdue Tickets',
+      value: stats.overdueCount.toLocaleString(),
+      subtitle: 'Critical backlog',
+      icon: <AlertTriangle className="w-6 h-6" />,
+      urgent: stats.overdueCount > 1000,
+      glow: stats.overdueCount > 5000
+    },
+    {
+      title: 'Due Today',
+      value: stats.dueTodayCount.toLocaleString(),
+      subtitle: 'Immediate attention',
+      icon: <Clock className="w-6 h-6" />,
+      urgent: stats.dueTodayCount > 0,
+      glow: stats.dueTodayCount > 10
+    },
+    {
+      title: 'Missing Components',
+      value: stats.missingComponentsCount.toLocaleString(),
+      subtitle: 'Need assignment',
+      icon: <Database className="w-6 h-6" />,
+      urgent: stats.missingComponentsCount > 1000,
+      glow: stats.missingComponentsCount > 5000
+    },
+    {
+      title: 'Data Team New',
+      value: stats.dataTeamNewCount.toLocaleString(),
+      subtitle: 'Awaiting processing',
+      icon: <Activity className="w-6 h-6" />,
+      urgent: stats.dataTeamNewCount > 5,
+      glow: stats.dataTeamNewCount > 10
+    },
+    {
+      title: 'Total Tickets',
+      value: stats.totalTickets.toLocaleString(),
+      subtitle: 'CM & OPRD projects',
+      icon: <FileText className="w-6 h-6" />,
+      urgent: false,
+      glow: false
+    },
+    {
+      title: 'Team Workload',
+      value: `${stats.teamPerformance.kyle + stats.teamPerformance.james + stats.teamPerformance.thomas}`,
+      subtitle: `K:${stats.teamPerformance.kyle} J:${stats.teamPerformance.james} T:${stats.teamPerformance.thomas}`,
+      icon: <Users className="w-6 h-6" />,
+      urgent: false,
+      glow: false
+    }
   ];
 
-  // Helper function to make API calls to our server-side route
-  const fetchJiraData = async (endpoint: string, params: Record<string, string> = {}) => {
-    const searchParams = new URLSearchParams({ endpoint, ...params });
-    const response = await fetch(`/api/jira?${searchParams}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    return response.json();
-  };
-
-  const fetchDashboardData = async () => {
-    if (!isConnected) return;
-    
-    setIsLoading(true);
-    try {
-      // Try to fetch real data first
-      let overdueData, dueTodayData, missingComponentData, allTicketsData;
-      
-      try {
-        // Fetch overdue tickets from CM and OPRD boards
-        overdueData = await fetchJiraData('search', {
-          jql: 'project in (CM, OPRD) AND duedate < now() AND status != Done ORDER BY duedate ASC'
-        });
-        
-        // Fetch due today tickets from CM and OPRD boards
-        const today = new Date().toISOString().split('T')[0];
-        dueTodayData = await fetchJiraData('search', {
-          jql: `project in (CM, OPRD) AND duedate = "${today}" AND status != Done ORDER BY priority DESC`
-        });
-        
-        // Fetch missing component tickets from CM and OPRD boards
-        missingComponentData = await fetchJiraData('search', {
-          jql: 'project in (CM, OPRD) AND component is EMPTY ORDER BY updated DESC'
-        });
-        
-        // Fetch all tickets from CM and OPRD boards
-        allTicketsData = await fetchJiraData('search', {
-          jql: 'project in (CM, OPRD) ORDER BY updated DESC'
-        });
-      } catch (apiError) {
-        console.warn('Jira API error, using mock data:', apiError);
-        
-        // Fallback to mock data based on our research findings
-        overdueData = {
-          total: 65,
-          issues: Array.from({ length: 65 }, (_, i) => ({
-            key: `CM-${10000 + i}`,
-            fields: {
-              summary: `Mock Overdue Ticket ${i + 1}`,
-              assignee: { displayName: i % 3 === 0 ? 'Kyle Dilbeck' : i % 3 === 1 ? 'James Cassidy' : 'Thomas Williams' },
-              status: { name: 'In Progress' },
-              priority: { name: i % 4 === 0 ? 'High' : 'Medium' },
-              duedate: new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              components: i % 5 === 0 ? [] : [{ name: 'Website Request' }],
-              issuetype: { name: 'Task' },
-              created: new Date(Date.now() - (i + 10) * 24 * 60 * 60 * 1000).toISOString(),
-              updated: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-              customfield_10016: null
-            }
-          }))
-        };
-        
-        const today = new Date().toISOString().split('T')[0];
-        dueTodayData = {
-          total: 6,
-          issues: Array.from({ length: 6 }, (_, i) => ({
-            key: `CM-${20000 + i}`,
-            fields: {
-              summary: `Mock Due Today Ticket ${i + 1}`,
-              assignee: { displayName: i % 3 === 0 ? 'Kyle Dilbeck' : i % 3 === 1 ? 'James Cassidy' : 'Thomas Williams' },
-              status: { name: 'In Progress' },
-              priority: { name: 'High' },
-              duedate: today,
-              components: [{ name: 'Website Request' }],
-              issuetype: { name: 'Task' },
-              created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-              updated: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-              customfield_10016: null
-            }
-          }))
-        };
-        
-        missingComponentData = {
-          total: 65,
-          issues: Array.from({ length: 65 }, (_, i) => ({
-            key: `CM-${30000 + i}`,
-            fields: {
-              summary: `Mock Missing Component Ticket ${i + 1}`,
-              assignee: { displayName: i % 3 === 0 ? 'Kyle Dilbeck' : i % 3 === 1 ? 'James Cassidy' : 'Thomas Williams' },
-              status: { name: 'Data Team New' },
-              priority: { name: 'Medium' },
-              duedate: null,
-              components: [],
-              issuetype: { name: 'Task' },
-              created: new Date(Date.now() - (i + 5) * 24 * 60 * 60 * 1000).toISOString(),
-              updated: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-              customfield_10016: null
-            }
-          }))
-        };
-        
-        allTicketsData = {
-          total: 150,
-          issues: [
-            ...overdueData.issues,
-            ...dueTodayData.issues,
-            ...missingComponentData.issues,
-            ...Array.from({ length: 14 }, (_, i) => ({
-              key: `CM-${40000 + i}`,
-              fields: {
-                summary: `Mock Data Team New Ticket ${i + 1}`,
-                assignee: { displayName: i % 3 === 0 ? 'Kyle Dilbeck' : i % 3 === 1 ? 'James Cassidy' : 'Thomas Williams' },
-                status: { name: 'Data Team New' },
-                priority: { name: 'Medium' },
-                duedate: null,
-                components: [],
-                issuetype: { name: 'Task' },
-                created: new Date(Date.now() - (i + 2) * 24 * 60 * 60 * 1000).toISOString(),
-                updated: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-                customfield_10016: null
-              }
-            }))
-          ]
-        };
-      }
-
-      // Process tickets
-      interface JiraTicket {
-        key: string;
-        fields: {
-          summary: string;
-          assignee: { displayName: string } | null;
-          status: { name: string };
-          priority: { name: string };
-          duedate: string | null;
-          components: { name: string }[];
-          issuetype: { name: string };
-          created: string;
-          updated: string;
-          customfield_10016: number | null;
-        };
-      }
-      
-      const processTickets = (tickets: JiraTicket[]): Ticket[] => {
-        return tickets.map(ticket => ({
-          key: ticket.key,
-          summary: ticket.fields.summary,
-          assignee: ticket.fields.assignee?.displayName || 'Unassigned',
-          status: ticket.fields.status.name,
-          priority: ticket.fields.priority?.name || 'None',
-          dueDate: ticket.fields.duedate,
-          component: ticket.fields.components?.[0]?.name || 'No Component',
-          issueType: ticket.fields.issuetype.name,
-          created: ticket.fields.created,
-          updated: ticket.fields.updated,
-          storyPoints: ticket.fields.customfield_10016,
-        }));
-      };
-
-      const overdueTickets = processTickets(overdueData.issues);
-      const dueTodayTickets = processTickets(dueTodayData.issues);
-      const missingComponentTickets = processTickets(missingComponentData.issues);
-      const allTickets = processTickets(allTicketsData.issues);
-
-      // Calculate stats
-      const newStats: DashboardStats = {
-        overdueCount: overdueData.total,
-        dueTodayCount: dueTodayData.total,
-        missingComponentsCount: missingComponentData.total,
-        activeTeamMembers: 3,
-        totalTickets: allTicketsData.total,
-        completedToday: allTickets.filter(t => t.status === 'Done' && 
-          new Date(t.updated).toDateString() === new Date().toDateString()).length,
-      };
-
-      // Update previous state before setting new state
-      setPreviousTickets(allTickets);
-      setPreviousOverdueCount(stats.overdueCount);
-      setPreviousMissingComponentsCount(stats.missingComponentsCount);
-      setPreviousDataTeamNewCount(allTickets.filter(t => t.status === 'Data Team New').length);
-
-      setStats(newStats);
-      setOverdueTickets(overdueTickets);
-      setDueTodayTickets(dueTodayTickets);
-      setMissingComponentTickets(missingComponentTickets);
-      setAllTickets(allTickets);
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isConnected) {
-      fetchDashboardData();
-      // Refresh every 10 minutes
-      const interval = setInterval(fetchDashboardData, 600000);
-      return () => clearInterval(interval);
-    }
-  }, [isConnected]);
-
-  // Auto-connect since we're using environment variables
-  useEffect(() => {
-    setIsConnected(true);
-  }, []);
+  const isLoading = overdueLoading || dueTodayLoading || missingComponentLoading || dataTeamNewLoading || allTicketsLoading;
 
   return (
-    <div className="min-h-screen bg-synth-bg-primary">
-      {/* Animated Background Particles */}
-      <div className="animated-bg-particles"></div>
-      
-      {/* Toast Notifications */}
-      <ToastManager
-        tickets={allTickets}
-        previousTickets={previousTickets}
-        overdueCount={stats.overdueCount}
-        previousOverdueCount={previousOverdueCount}
-        missingComponentsCount={stats.missingComponentsCount}
-        previousMissingComponentsCount={previousMissingComponentsCount}
-        dataTeamNewCount={allTickets.filter(t => t.status === 'Data Team New').length}
-        previousDataTeamNewCount={previousDataTeamNewCount}
+    <DashboardLayout 
+      title="J-Dash Analytics" 
+      subtitle="Real-time Jira Analytics for CM & OPRD Projects"
+    >
+      {/* Crisis Alert */}
+      <CaseCrisisAlert 
+        caseNumber="CRISIS-001"
+        ticketCount={stats.missingComponentsCount}
+        tickets={missingComponentData?.issues?.map(issue => ({
+          key: issue.key,
+          summary: issue.fields.summary,
+          assignee: issue.fields.assignee?.displayName || 'Unassigned',
+          status: issue.fields.status.name,
+          component: issue.fields.components?.[0]?.name || 'No Component'
+        })) || []}
       />
-      
-      {/* Header with Live Stats */}
-      <DashboardHeader stats={stats} lastUpdated={lastUpdated} />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {!isConnected ? (
-          <div className="flex justify-center items-center min-h-screen">
-            <Card className="w-full max-w-md">
-              <div className="text-center">
-                <div className="bg-synth-neon-purple/20 p-6 rounded-lg mb-6">
-                  <Activity className="w-16 h-16 text-synth-neon-purple mx-auto animate-glow" />
-                </div>
-                <h2 className="text-3xl font-bold text-synth-text-bright mb-4">Loading Jira Data</h2>
-                <p className="text-synth-text-muted mb-6">
-                  Connecting to CPT Group Jira and fetching your project data...
-                </p>
-                <div className="flex justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-synth-neon-purple"></div>
-                </div>
-              </div>
-            </Card>
+      {/* Toast Manager */}
+      <ToastManager
+        tickets={allTicketsData?.issues ? transformJiraIssuesToTickets(allTicketsData.issues) : []}
+        previousTickets={[]}
+        overdueCount={stats.overdueCount}
+        previousOverdueCount={0}
+        missingComponentsCount={stats.missingComponentsCount}
+        previousMissingComponentsCount={0}
+        dataTeamNewCount={stats.dataTeamNewCount}
+        previousDataTeamNewCount={0}
+      />
+
+      {/* Loading State */}
+      {isLoading && (
+        <Card className="animate-pulse">
+          <div className="h-32 bg-synth-bg-secondary rounded"></div>
+        </Card>
+      )}
+
+      {/* Main Metrics Grid */}
+      {!isLoading && (
+        <MetricGrid 
+          metrics={metrics} 
+          columns={6}
+          className="mb-8"
+        />
+      )}
+
+      {/* Overdue Analytics Section */}
+      {!isLoading && (
+        <OverdueAnalytics />
+      )}
+
+      {/* Recent Tickets */}
+      {!isLoading && allTicketsData && (
+        <Card>
+          <div className="p-6">
+            <h3 className="text-xl font-bold text-synth-text-bright mb-4">
+              Recent Tickets ({(allTicketsData?.total || 0).toLocaleString()})
+            </h3>
+            <DataView
+              tickets={allTicketsData?.issues ? transformJiraIssuesToTickets(allTicketsData.issues) : []}
+              title=""
+              viewType="grid"
+              showFilters={true}
+            />
           </div>
-        ) : (
-          <>
-            {/* Critical Metrics - Based on Real Data Analysis */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <MetricCard
-                title="Component Assignment Crisis"
-                value={stats.missingComponentsCount}
-                icon={AlertCircle}
-                color="red"
-                glow={stats.missingComponentsCount > 50}
-                urgent={stats.missingComponentsCount > 50}
-                subtitle={`${stats.missingComponentsCount} tickets uncategorized - James manually assigns every morning`}
-              />
-              <MetricCard
-                title="Data Team New Bottleneck"
-                value={allTickets.filter(t => t.status === 'Data Team New').length}
-                icon={Clock}
-                color="orange"
-                glow={allTickets.filter(t => t.status === 'Data Team New').length > 3}
-                urgent={allTickets.filter(t => t.status === 'Data Team New').length > 3}
-                subtitle={`${allTickets.filter(t => t.status === 'Data Team New').length} tickets stuck - Avg 14.7 days`}
-              />
-              <MetricCard
-                title="Case 23CV010356 Crisis"
-                value={allTickets.filter(t => t.summary.includes('23CV010356')).length}
-                icon={Target}
-                color="red"
-                glow={allTickets.filter(t => t.summary.includes('23CV010356')).length > 0}
-                urgent={allTickets.filter(t => t.summary.includes('23CV010356')).length > 0}
-                subtitle={`${allTickets.filter(t => t.summary.includes('23CV010356')).length} tickets for single case - All missing components`}
-              />
-              <MetricCard
-                title="Overdue Tickets"
-                value={stats.overdueCount}
-                icon={AlertTriangle}
-                color="red"
-                glow={stats.overdueCount > 20}
-                urgent={stats.overdueCount > 20}
-                subtitle={`${stats.overdueCount} tickets overdue - 53+ tickets 53+ days overdue`}
-              />
-            </div>
-
-            {/* Overdue Tickets - Most Critical */}
-            {stats.overdueCount > 0 && (
-              <div className="mb-8">
-                <OverdueTicketsList 
-                  tickets={overdueTickets
-                    .filter(ticket => ticket.dueDate) // Only include tickets with due dates
-                    .map(ticket => ({
-                      key: ticket.key,
-                      summary: ticket.summary,
-                      assignee: ticket.assignee,
-                      dueDate: ticket.dueDate!,
-                      daysOverdue: Math.floor((new Date().getTime() - new Date(ticket.dueDate!).getTime()) / (1000 * 60 * 60 * 24)),
-                      priority: ticket.priority,
-                      status: ticket.status
-                    }))}
-                  maxDisplay={5}
-                />
-        </div>
-            )}
-
-            {/* Due Today Tickets */}
-            {stats.dueTodayCount > 0 && (
-              <div className="mb-8">
-                <DataView
-                  tickets={dueTodayTickets}
-                  title="Due Today - Urgent Priority"
-                  viewType="grid"
-                  onTicketClick={(ticket) => {
-                    window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Missing Components */}
-            {stats.missingComponentsCount > 0 && (
-              <div className="mb-8">
-                <DataView
-                  tickets={missingComponentTickets}
-                  title="Missing Components - Needs Attention"
-                  viewType="list"
-                  onTicketClick={(ticket) => {
-                    window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
-                  }}
-                />
-              </div>
-            )}
-
-            {/* All Tickets Overview */}
-            <div className="mb-8">
-              <DataView
-                tickets={allTickets}
-                title="All Data Team Tickets"
-                viewType="grid"
-                showFilters={true}
-                onTicketClick={(ticket) => {
-                  window.open(`https://cptgroup.atlassian.net/browse/${ticket.key}`, '_blank');
-                }}
-              />
-            </div>
-
-            {/* Crisis Alert Banner */}
-            {(stats.missingComponentsCount > 50 || allTickets.filter(t => t.status === 'Data Team New').length > 3 || allTickets.filter(t => t.summary.includes('23CV010356')).length > 0) && (
-              <div className="mb-8 bg-gradient-to-r from-red-900/20 to-orange-900/20 border border-red-500/50 rounded-lg p-6 animate-pulse-slow">
-                <div className="flex items-center space-x-3 mb-4">
-                  <AlertTriangle className="w-8 h-8 text-red-400 animate-pulse" />
-                  <h2 className="text-2xl font-bold text-red-400">🚨 CRISIS ALERT 🚨</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {stats.missingComponentsCount > 50 && (
-                    <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-4">
-                      <h3 className="text-lg font-bold text-red-300 mb-2">Component Assignment Crisis</h3>
-                      <p className="text-red-200 text-sm">
-                        {stats.missingComponentsCount} tickets missing components. James manually assigns every morning - this is unsustainable!
-                      </p>
-                    </div>
-                  )}
-                  {allTickets.filter(t => t.status === 'Data Team New').length > 3 && (
-                    <div className="bg-orange-900/30 border border-orange-500/30 rounded-lg p-4">
-                      <h3 className="text-lg font-bold text-orange-300 mb-2">Data Team New Bottleneck</h3>
-                      <p className="text-orange-200 text-sm">
-                        {allTickets.filter(t => t.status === 'Data Team New').length} tickets stuck in Data Team New. Average 14.7 days - workflow is broken!
-                      </p>
-                    </div>
-                  )}
-                  {allTickets.filter(t => t.summary.includes('23CV010356')).length > 0 && (
-                    <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-4">
-                      <h3 className="text-lg font-bold text-red-300 mb-2">Case 23CV010356 Crisis</h3>
-                      <p className="text-red-200 text-sm">
-                        {allTickets.filter(t => t.summary.includes('23CV010356')).length} tickets for single case. All missing components - resource drain!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Team Performance by Component - Real Data */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-synth-neon-purple/20 rounded-lg">
-                    <Globe className="w-6 h-6 text-synth-neon-purple" />
-                  </div>
-                  <h3 className="text-lg font-bold text-synth-text-bright">Kyle - Websites</h3>
-                </div>
-                <div className="text-3xl font-bold text-synth-neon-purple mb-2">
-                  {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && (t.component?.includes('Website') || t.summary.includes('Website'))).length}
-                </div>
-                <p className="text-synth-text-muted text-sm">Website tickets assigned</p>
-                <div className="mt-2 text-xs text-synth-text-muted">
-                  Data Team New: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.status === 'Data Team New').length} | 
-                  Missing Components: {allTickets.filter(t => t.assignee === 'Kyle Dilbeck' && t.component === 'No Component').length}
-                </div>
-              </Card>
-
-              <Card>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-synth-neon-cyan/20 rounded-lg">
-                    <Database className="w-6 h-6 text-synth-neon-cyan" />
-                  </div>
-                  <h3 className="text-lg font-bold text-synth-text-bright">James - Database</h3>
-                </div>
-                <div className="text-3xl font-bold text-synth-neon-cyan mb-2">
-                  {allTickets.filter(t => t.assignee === 'James Cassidy' && (t.component?.includes('Database') || t.component?.includes('Data') || t.summary.includes('Database'))).length}
-                </div>
-                <p className="text-synth-text-muted text-sm">Database tickets assigned</p>
-                <div className="mt-2 text-xs text-synth-text-muted">
-                  Development: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'DEVELOPMENT').length} | 
-                  PEER TESTING: {allTickets.filter(t => t.assignee === 'James Cassidy' && t.status === 'PEER TESTING').length}
-                </div>
-              </Card>
-
-              <Card>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-synth-neon-green/20 rounded-lg">
-                    <FileText className="w-6 h-6 text-synth-neon-green" />
-                  </div>
-                  <h3 className="text-lg font-bold text-synth-text-bright">Thomas - Reports</h3>
-                </div>
-                <div className="text-3xl font-bold text-synth-neon-green mb-2">
-                  {allTickets.filter(t => t.assignee === 'Thomas Williams' && (t.component?.includes('Report') || t.summary.includes('Report'))).length}
-                </div>
-                <p className="text-synth-text-muted text-sm">Report tickets assigned</p>
-                <div className="mt-2 text-xs text-synth-text-muted">
-                  To Do: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'To Do').length} | 
-                  Completed: {allTickets.filter(t => t.assignee === 'Thomas Williams' && t.status === 'Completed').length}
-                </div>
-              </Card>
-            </div>
-
-            {/* Loading Indicator */}
-            {isLoading && (
-              <Card className="fixed top-4 right-4 z-50">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-synth-neon-purple"></div>
-                  <span className="text-synth-text-primary text-sm">Updating data...</span>
-                </div>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+        </Card>
+      )}
+    </DashboardLayout>
   );
 }
