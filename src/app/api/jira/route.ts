@@ -10,21 +10,16 @@ console.log('JIRA_API_TOKEN:', JIRA_API_TOKEN ? 'SET' : 'NOT SET');
 console.log('JIRA_USER_EMAIL:', JIRA_USER_EMAIL);
 console.log('JIRA_DOMAIN:', JIRA_DOMAIN);
 
-async function makeJiraRequest(path: string, params: Record<string, string> = {}) {
+async function makeJiraRequest(path: string) {
   if (!JIRA_API_TOKEN || !JIRA_USER_EMAIL || !JIRA_DOMAIN) {
     throw new Error('Jira API credentials are not set in environment variables.');
   }
 
   const auth = Buffer.from(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`).toString('base64');
   
-  const url = new URL(`${JIRA_DOMAIN}/rest/api/3/search/jql`);
-  
-  // Add query parameters
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, value);
-  });
+  const url = `${JIRA_DOMAIN}/rest/api/3${path}`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -34,7 +29,9 @@ async function makeJiraRequest(path: string, params: Record<string, string> = {}
   });
 
   if (!response.ok) {
-    throw new Error(`Jira API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('Jira API error details:', errorText);
+    throw new Error(`Jira API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   return response.json();
@@ -63,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Making Jira request with JQL:', jql);
-    const data = await makeJiraRequest(`/search?jql=${encodeURIComponent(jql)}`);
+    const data = await makeJiraRequest(`/search?jql=${encodeURIComponent(jql)}&maxResults=100`);
     console.log('Jira response received, total issues:', data.total);
     
     return NextResponse.json(data);
