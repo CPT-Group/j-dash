@@ -114,18 +114,48 @@ export default function Dashboard() {
       title="J-Dash Analytics" 
       subtitle="Real-time Jira Analytics for CM & OPRD Projects"
     >
-      {/* Crisis Alert */}
-      <CaseCrisisAlert 
-        caseNumber="CRISIS-001"
-        ticketCount={stats.missingComponentsCount}
-        tickets={missingComponentData?.issues?.map(issue => ({
-          key: issue.key,
-          summary: issue.fields.summary,
-          assignee: issue.fields.assignee?.displayName || 'Unassigned',
-          status: issue.fields.status.name,
-          component: issue.fields.components?.[0]?.name || 'No Component'
-        })) || []}
-      />
+      {/* Crisis Alerts - Based on real data analysis */}
+      {stats.overdueCount > 10 && (
+        <CaseCrisisAlert 
+          caseNumber={`OVERDUE-CRISIS-${stats.overdueCount}`}
+          ticketCount={stats.overdueCount}
+          tickets={overdueData?.issues?.slice(0, 5).map(issue => ({
+            key: issue.key,
+            summary: issue.fields.summary,
+            assignee: issue.fields.assignee?.displayName || 'Unassigned',
+            status: issue.fields.status.name,
+            component: issue.fields.components?.[0]?.name || 'No Component'
+          })) || []}
+        />
+      )}
+      
+      {stats.missingComponentsCount > 50 && (
+        <CaseCrisisAlert 
+          caseNumber={`COMPONENTS-CRISIS-${stats.missingComponentsCount}`}
+          ticketCount={stats.missingComponentsCount}
+          tickets={missingComponentData?.issues?.slice(0, 5).map(issue => ({
+            key: issue.key,
+            summary: issue.fields.summary,
+            assignee: issue.fields.assignee?.displayName || 'Unassigned',
+            status: issue.fields.status.name,
+            component: issue.fields.components?.[0]?.name || 'No Component'
+          })) || []}
+        />
+      )}
+      
+      {stats.dataTeamNewCount > 5 && (
+        <CaseCrisisAlert 
+          caseNumber={`DATA-TEAM-CRISIS-${stats.dataTeamNewCount}`}
+          ticketCount={stats.dataTeamNewCount}
+          tickets={dataTeamNewData?.issues?.slice(0, 5).map(issue => ({
+            key: issue.key,
+            summary: issue.fields.summary,
+            assignee: issue.fields.assignee?.displayName || 'Unassigned',
+            status: issue.fields.status.name,
+            component: issue.fields.components?.[0]?.name || 'No Component'
+          })) || []}
+        />
+      )}
 
       {/* Toast Manager */}
       <ToastManager

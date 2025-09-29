@@ -12,7 +12,10 @@ export function useOverdueTickets(): UseJiraDataReturn {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/jira?endpoint=search&jql=project%20in%20(CM,OPRD)%20AND%20duedate%20%3C%20now()%20AND%20status%20!%3D%20Done%20ORDER%20BY%20duedate%20ASC');
+        // Only show active tickets that are overdue (exclude Resolved with Done resolution)
+        const activeStatuses = '"Completed", "REQUIREMENT REVIEW", "To Do", "Request Complete", "UAT", "New", "In Progress", "PEER TESTING", "Data Team New", "Data Team Testing", "Open", "Waiting", "Waiting QA"';
+        const jql = `project in (CM,OPRD) AND status in (${activeStatuses}) AND duedate < now() ORDER BY duedate ASC`;
+        const response = await fetch(`/api/jira?endpoint=search&jql=${encodeURIComponent(jql)}`);
         const result = await response.json();
         setData(result);
       } catch (err) {
@@ -38,7 +41,10 @@ export function useDueTodayTickets(): UseJiraDataReturn {
       try {
         setLoading(true);
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`/api/jira?endpoint=search&jql=project%20in%20(CM,OPRD)%20AND%20duedate%20%3D%20%22${today}%22%20AND%20status%20!%3D%20Done%20ORDER%20BY%20priority%20DESC`);
+        // Only show active tickets due today (exclude Resolved with Done resolution)
+        const activeStatuses = '"Completed", "REQUIREMENT REVIEW", "To Do", "Request Complete", "UAT", "New", "In Progress", "PEER TESTING", "Data Team New", "Data Team Testing", "Open", "Waiting", "Waiting QA"';
+        const jql = `project in (CM,OPRD) AND status in (${activeStatuses}) AND duedate = "${today}" ORDER BY priority DESC`;
+        const response = await fetch(`/api/jira?endpoint=search&jql=${encodeURIComponent(jql)}`);
         const result = await response.json();
         setData(result);
       } catch (err) {
@@ -63,7 +69,10 @@ export function useMissingComponentTickets(): UseJiraDataReturn {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/jira?endpoint=search&jql=project%20in%20(CM,OPRD)%20AND%20component%20is%20EMPTY%20ORDER%20BY%20updated%20DESC');
+        // Only show active tickets missing components (exclude Resolved with Done resolution)
+        const activeStatuses = '"Completed", "REQUIREMENT REVIEW", "To Do", "Request Complete", "UAT", "New", "In Progress", "PEER TESTING", "Data Team New", "Data Team Testing", "Open", "Waiting", "Waiting QA"';
+        const jql = `project in (CM,OPRD) AND status in (${activeStatuses}) AND component is EMPTY ORDER BY updated DESC`;
+        const response = await fetch(`/api/jira?endpoint=search&jql=${encodeURIComponent(jql)}`);
         const result = await response.json();
         setData(result);
       } catch (err) {
@@ -88,7 +97,10 @@ export function useDataTeamNewTickets(): UseJiraDataReturn {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/jira?endpoint=search&jql=project%20in%20(CM,OPRD)%20AND%20status%20%3D%20%22Data%20Team%20New%22%20ORDER%20BY%20updated%20DESC');
+        // Only show active Data Team New tickets (exclude Resolved with Done resolution)
+        const activeStatuses = '"Completed", "REQUIREMENT REVIEW", "To Do", "Request Complete", "UAT", "New", "In Progress", "PEER TESTING", "Data Team New", "Data Team Testing", "Open", "Waiting", "Waiting QA"';
+        const jql = `project in (CM,OPRD) AND status in (${activeStatuses}) AND status = "Data Team New" ORDER BY updated DESC`;
+        const response = await fetch(`/api/jira?endpoint=search&jql=${encodeURIComponent(jql)}`);
         const result = await response.json();
         setData(result);
       } catch (err) {
@@ -113,7 +125,10 @@ export function useAllTickets(): UseJiraDataReturn {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/jira?endpoint=search&jql=project%20in%20(CM,OPRD)%20ORDER%20BY%20updated%20DESC');
+        // Only show active tickets (exclude Resolved with Done resolution)
+        const activeStatuses = '"Completed", "REQUIREMENT REVIEW", "To Do", "Request Complete", "UAT", "New", "In Progress", "PEER TESTING", "Data Team New", "Data Team Testing", "Open", "Waiting", "Waiting QA"';
+        const jql = `project in (CM,OPRD) AND status in (${activeStatuses}) ORDER BY updated DESC`;
+        const response = await fetch(`/api/jira?endpoint=search&jql=${encodeURIComponent(jql)}`);
         const result = await response.json();
         setData(result);
       } catch (err) {
