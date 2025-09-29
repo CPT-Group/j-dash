@@ -69,6 +69,32 @@ All notable changes to J-Dash will be documented in this file.
 - 🎯 **Crisis Detection**: Automated alerts for overdue tickets, missing components, and bottlenecks
 - 📈 **Performance Metrics**: Live team performance tracking and workload analysis
 
+## [0.3.3] - 2025-01-29
+
+### Added
+- TicketDetailsDialog for detailed ticket views with crisis indicators
+- CrisisManagementDialog for comprehensive crisis analysis and management
+- Enhanced DataView component with advanced filtering capabilities
+- Multi-select filters for status, assignee, priority, and component
+- Age-based filtering (today, week, month, older)
+- Advanced sorting options (created, updated, due date, priority, assignee)
+- Crisis Management button in dashboard header
+- Workload imbalance analysis and visualization
+- Enhanced toast notifications with specific crisis alerts
+- Real-time crisis detection based on actual data patterns
+
+### Enhanced
+- Analytics dashboard with comprehensive filtering and sorting
+- Toast notifications now show specific crisis types and thresholds
+- Data views with better filtering and search capabilities
+- Crisis detection with real-time analysis of workload distribution
+- Ticket details with crisis indicators and overdue warnings
+
+### Fixed
+- Status queries now properly exclude truly completed tickets
+- Crisis detection based on real data patterns instead of fake alerts
+- Improved TypeScript type safety across components
+
 ## [0.3.2] - 2025-01-29
 
 ### Fixed
